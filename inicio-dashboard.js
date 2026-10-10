@@ -166,6 +166,7 @@
     if (data.resto && data.resto.unidades) notas.push(`Otras ${number.format(data.resto.unidades)} unidades suman ${pesos(data.resto.total)}.`);
     poner('cost-note', notas.join(' '));
     poner('cost-period', periodo(data));
+    poner('cost-period-tabla', periodo(data));
   }
   const periodo = data => {
     if (!data || !data.desde) return 'Últimos 12 meses';

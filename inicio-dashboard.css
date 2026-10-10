@@ -3,7 +3,7 @@ body.operations-home main{height:auto;min-height:100vh;display:block;overflow:vi
 body.operations-home .workspace{display:block;padding:22px clamp(18px,2.5vw,38px) 130px;min-height:0}
 body.operations-home .workspace::before{display:none}
 body.operations-home .workspace::after{display:none}
-body.operations-home .summary{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;overflow:visible;max-width:1500px;margin:0 auto}
+body.operations-home .summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;overflow:visible;max-width:1500px;margin:0 auto}
 body.operations-home .summary>*{min-width:0;margin:0}
 body.operations-home .summary-head{grid-column:1/-1;align-items:center;padding:0 0 6px;text-shadow:none}
 .dashboard-eyebrow{margin:0 0 7px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.1em;font-weight:600}
@@ -61,9 +61,12 @@ body.operations-home .stat b{font-size:28px;font-weight:700;letter-spacing:-.02e
 body.operations-home .stat small{font-size:13px;line-height:1.4;color:var(--muted)}
 @media(max-width:640px){body.operations-home .stat-grid{grid-template-columns:minmax(0,1fr);gap:10px}}
 body.operations-home #aviso{display:none}
-@media(min-width:981px){body.operations-home .topbar{position:sticky;top:0;z-index:10}body.operations-home .sidebar{height:100vh}}
+/* La barra de la izquierda queda fija al bajar. El contenedor no puede
+   medir 100vh: el pegado solo dura lo que mide su contenedor, y el tablero
+   es más alto que la ventana. */
+@media(min-width:981px){body.operations-home .topbar{position:sticky;top:0;z-index:10}body.operations-home .shell{height:auto;align-items:start}body.operations-home .sidebar{position:sticky;top:0;height:100vh;overflow-y:auto}}
 @media(max-width:1150px){body.operations-home .km-head{flex-wrap:wrap}body.operations-home .summary .card{padding:20px}}
-@media(max-width:760px){body.operations-home .summary{grid-template-columns:minmax(0,1fr);gap:16px}body.operations-home .workspace{padding:22px 16px 120px}body.operations-home .summary-head{align-items:start;gap:12px}body.operations-home .summary-head span{max-width:110px}body.operations-home .km-head{flex-wrap:wrap;gap:14px}body.operations-home .km-num b{font-size:38px}.dashboard-alerts{grid-row:4}.chart-tooltip{max-width:135px}.alert-overview .critical-label{margin-left:0}}
+@media(max-width:760px){body.operations-home .summary{grid-template-columns:minmax(0,1fr);gap:16px}body.operations-home .workspace{padding:22px 16px 120px}body.operations-home .summary-head{align-items:start;gap:12px}body.operations-home .summary-head span{max-width:110px}body.operations-home .km-head{flex-wrap:wrap;gap:14px}body.operations-home .km-num b{font-size:38px}.chart-tooltip{max-width:135px}.alert-overview .critical-label{margin-left:0}}
 @media(max-width:760px){body.operations-home .summary-head{flex-wrap:wrap}.dashboard-context{width:100%;align-items:stretch}.alert-mini{flex-wrap:wrap}.alert-mini b{margin-left:auto}body.operations-home .summary-head #dashboard-status{max-width:none;text-align:left}}
 
 /* ---------------------------------------------------------------------
@@ -71,8 +74,7 @@ body.operations-home #aviso{display:none}
    porque la comparación es entre columnas —preventivo contra correctivo,
    unidad contra unidad— y partida al medio no se lee.
    --------------------------------------------------------------------- */
-body.operations-home .dashboard-costos{grid-column:1/-1}
-.dashboard-costos .dashboard-section-head>span{font-size:12px;color:var(--muted);margin-right:auto;margin-left:10px}
+.dashboard-costos .dashboard-section-head>span,.dashboard-patentes .dashboard-section-head>span{font-size:12px;color:var(--muted);margin-right:auto;margin-left:10px}
 .cost-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0 16px}
 .cost-kpi{padding:14px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
 .cost-kpi small{display:block;font-size:12px;color:var(--muted)}
@@ -99,7 +101,10 @@ body.operations-home .dashboard-costos{grid-column:1/-1}
 .cost-table td.num{font-variant-numeric:tabular-nums}
 .cost-table td strong{display:block;font-weight:600}
 .cost-table td small{display:block;margin-top:3px;font-size:11px;color:var(--muted)}
-@media(max-width:760px){.cost-kpis{grid-template-columns:1fr}.dashboard-costos .dashboard-section-head{flex-wrap:wrap}.dashboard-costos .dashboard-section-head>span{margin-left:0}}
+@media(max-width:760px){.cost-kpis{grid-template-columns:1fr}.dashboard-costos .dashboard-section-head,.dashboard-patentes .dashboard-section-head{flex-wrap:wrap}.dashboard-costos .dashboard-section-head>span,.dashboard-patentes .dashboard-section-head>span{margin-left:0}}
+/* El título de la tarjeta ya dice qué es la tabla: el rótulo queda para
+   los lectores de pantalla. */
+.dashboard-patentes .cost-table caption{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* ---------------------------------------------------------------------
    Columna de la derecha: Titán, el asistente. Es una tarjeta más, en su lugar: no
@@ -107,11 +112,6 @@ body.operations-home .dashboard-costos{grid-column:1/-1}
    ancha va al costado de los números; en una mediana, debajo del título;
    en el celular, al final.
    --------------------------------------------------------------------- */
-body.operations-home .summary>*{order:4}
-body.operations-home .summary-head{order:0}
-body.operations-home .stat-grid{order:1}
-body.operations-home .dashboard-alerts{order:3}
-body.operations-home .rail{order:2;grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start;align-self:start;align-content:start}
 body.operations-home .summary .pengui-card{padding:0;overflow:hidden;display:flex;flex-direction:column;height:640px}
 .pengui-head{display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line)}
 /* La cabecera con Titán: el robot grande saludando y su globo. */
@@ -128,22 +128,56 @@ body.operations-home .summary .pengui-card{padding:0;overflow:hidden;display:fle
 .pengui-card iframe{flex:1;min-height:0;width:100%;border:0;background:var(--panel)}
 
 
-/* Mediana: los cuadros en una columna y la de la derecha al costado. */
-@media(min-width:1180px){
-  body.operations-home .summary{grid-template-columns:minmax(0,1fr) clamp(300px,27vw,360px);max-width:1700px}
-  body.operations-home .summary>*{grid-column:1}
-  body.operations-home .summary-head{grid-column:1/-1}
-  body.operations-home .rail{grid-column:2;grid-row:2/span 6}
-}
-/* Ancha: los dos cuadros de siempre y la columna de la derecha. */
-@media(min-width:1560px){
-  body.operations-home .summary{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) clamp(320px,22vw,380px)}
-  body.operations-home .summary>*{grid-column:auto}
-  body.operations-home .summary-head{grid-column:1/-1}
-  body.operations-home .dashboard-costos,body.operations-home .stat-grid{grid-column:1/3}
-  body.operations-home .rail{grid-column:3;grid-row:2/span 4}
-}
+/* ---------------------------------------------------------------------
+   Dos columnas: a la izquierda lo que se mira en detalle —recorrido,
+   litros, gasto por patente, alertas—; a la derecha Titán y los números
+   que se leen de un vistazo —consumo y costo por kilómetro—, en tarjetas
+   más chicas. Cada columna crece por su cuenta: una tarjeta alta de un
+   lado no deja huecos en el otro.
+
+   Por debajo de 1180 px las columnas se disuelven y las tarjetas se
+   acomodan solas en la grilla, de a pares.
+   --------------------------------------------------------------------- */
+body.operations-home .dash-main,body.operations-home .dash-side{display:contents}
+body.operations-home .summary>*,body.operations-home .dash-main>*,body.operations-home .dash-side>*{min-width:0;margin:0}
+body.operations-home .summary-head{order:0}
+body.operations-home .stat-grid{order:1;grid-column:1/-1}
+body.operations-home .rail{order:2;grid-column:1/-1;display:grid;gap:20px}
+body.operations-home #km{order:3}
+body.operations-home #litros{order:4}
+body.operations-home #consumo{order:5}
+body.operations-home .dashboard-costos{order:6}
+body.operations-home .dashboard-patentes{order:7;grid-column:1/-1}
+body.operations-home .dashboard-alerts{order:8;grid-column:1/-1}
+body.operations-home #aviso{order:9}
 @media(max-width:760px){
-  body.operations-home .rail{order:9}
+  body.operations-home .rail{order:10}
   body.operations-home .summary .pengui-card{height:600px}
+}
+/* Costo por kilómetro en tarjeta chica: correctivo y preventivo lado a
+   lado, el gasto del período abajo a lo ancho. */
+.dash-side .cost-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 14px}
+.dash-side .cost-kpi{padding:12px}
+.dash-side .cost-kpi:last-child{grid-column:1/-1}
+.dash-side .cost-kpi b{font-size:22px}
+@media(min-width:1180px){
+  body.operations-home .summary{grid-template-columns:minmax(0,1fr) clamp(300px,26vw,380px);max-width:1700px;align-items:start}
+  body.operations-home .dash-main,body.operations-home .dash-side{display:flex;flex-direction:column;gap:20px;min-width:0}
+  body.operations-home .dash-main{grid-column:1}
+  body.operations-home .dash-side{grid-column:2}
+  /* Las tarjetas de la derecha, más compactas. */
+  body.operations-home .dash-side .card{padding:18px}
+  body.operations-home .dash-side .km-num b{font-size:30px}
+  body.operations-home .dash-side .km-sub{min-height:0}
+  body.operations-home .dash-side .fuel-chart{gap:10px}
+  body.operations-home .dash-side .fuel-row-label{margin-bottom:6px}
+  body.operations-home .dash-side .fuel-row-label strong{font-size:16px}
+  body.operations-home .dash-side .fuel-track{height:9px}
+  body.operations-home .dash-side .fuel-row small{margin-top:5px}
+  .dash-side .dashboard-costos .dashboard-section-head{flex-wrap:wrap;row-gap:4px}
+  .dash-side .dashboard-costos .dashboard-section-head>span{margin:0;flex-basis:100%}
+}
+/* Ancha: recorrido y litros, uno al lado del otro. */
+@media(min-width:1560px){
+  body.operations-home .dash-main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
 }
