@@ -457,8 +457,8 @@
         <div><label>CUIT</label><input id="xAltaCuit" inputmode="numeric" placeholder="30-12345678-9"></div>
       </div>
       <div class="barra" style="margin:10px 0 0">
-        <button class="btn" type="button" id="xAltaSi">Dar de alta y guardar</button>
-        <button class="btn alt" type="button" id="xAltaNo">Guardar como proveedor genérico</button>
+        <button class="btn" type="button" id="xAltaSi">Dar de alta</button>
+        <button class="btn alt" type="button" id="xAltaNo">Usar como proveedor genérico</button>
       </div>
     </div>
     <div class="ancho solo-una"><label>Qué se hizo</label>
@@ -1161,6 +1161,8 @@ function opcionesProveedor() {
 function pistaProveedor() {
   const p = (D.datos?.proveedores || []).find(x => String(x.id) === $('#xProveedor').value);
   $('#xProveedorPista').textContent = p ? 'En el registro' + (p.cuit ? ' · CUIT ' + p.cuit : '') + '.'
+    : $('#xTaller').value.trim() && $('#xTaller').value.trim() === D.provGenerico
+      ? 'Proveedor genérico, fuera del registro.'
     : $('#xTaller').value.trim() ? 'No está en el registro de proveedores.'
     : (D.datos?.proveedores || []).length ? '' : 'Sin proveedores en el registro.';
 }
@@ -1182,6 +1184,17 @@ $('#xTaller').oninput = () => {
   $('#xAltaCaja').hidden = true;
   pistaProveedor();
 };
+$('#xTaller').onchange = () => {
+  const nombre = $('#xTaller').value.trim();
+  if (nombre && !$('#xProveedor').value && nombre !== D.provGenerico) preguntarAlta();
+};
+function preguntarAlta() {
+  const nombre = $('#xTaller').value.trim();
+  $('#xAltaTexto').textContent = `«${nombre}» no está en el registro de proveedores.`;
+  if (!$('#xAltaCuit').value) $('#xAltaCuit').value = D.cuitLeido || '';
+  $('#xAltaCaja').hidden = false;
+  $('#xAltaCaja').scrollIntoView({block: 'nearest'});
+}
 const proveedorPorNombre = nombre => ((D.datos?.proveedores || [])
   .find(p => p.nombre.toLowerCase() === String(nombre || '').trim().toLowerCase()) || {}).id;
 
@@ -1191,7 +1204,8 @@ $('#nuevaExterna').onclick = () => {
   $('#xMantenimiento').value = '';
   ['xFactura','xMonto','xKm','xTaller','xDetalle','xSolicitud','xGestion']
     .forEach(c => $('#' + c).value = '');
-  D.cuitLeido = '';
+  D.cuitLeido = ''; D.provGenerico = '';
+  $('#xAltaCuit').value = '';
   opcionesProveedor(); elegirProveedor(null);
   $('#cajaSolicitud').hidden = true;
   limpiarLector();
@@ -1427,6 +1441,7 @@ function volcarFactura(f) {
     elegirProveedor(null);
     poner('xTaller', f.taller);
     pistaProveedor();
+    if (f.taller) preguntarAlta();
   }
   poner('xFactura', f.factura);
   poner('xFecha', f.fecha);
@@ -1460,7 +1475,7 @@ function volcarFactura(f) {
   if (faltan.length) dudas.unshift('No se pudo leer ' + faltan.join(', ') + '.');
   if (f.moneda && f.moneda !== 'ARS') dudas.unshift(`La factura está en ${esc(f.moneda)}, no en pesos.`);
   if (!f.proveedor_id && f.taller)
-    dudas.push(`Proveedor fuera del registro: ${f.taller}. Al guardar se ofrece darlo de alta.`);
+    dudas.push(`Proveedor fuera del registro: ${f.taller}. Se ofrece darlo de alta.`);
   else if (f.proveedor_como === 'parecido')
     dudas.push(`Proveedor reconocido por nombre parecido: «${f.taller}» se tomó como ${f.proveedor}. Revisar que sea el correcto.`);
 
@@ -1496,16 +1511,19 @@ $('#xUnidad').onchange = () => {
 $('#guardarExterna').onclick = () => {
   $('#avisoExterna').innerHTML = '';
   const nombre = $('#xTaller').value.trim();
-  if (nombre && !$('#xProveedor').value) {
-    $('#xAltaTexto').textContent = `«${nombre}» no está en el registro de proveedores.`;
-    $('#xAltaCuit').value = D.cuitLeido || '';
-    $('#xAltaCaja').hidden = false;
-    $('#xAltaCaja').scrollIntoView({block: 'nearest'});
+  if (nombre && !$('#xProveedor').value && nombre !== D.provGenerico) {
+    preguntarAlta();
+    $('#avisoExterna').innerHTML = '<div class="aviso mal">Falta definir el proveedor: alta o genérico.</div>';
     return;
   }
   guardarExterna();
 };
-$('#xAltaNo').onclick = () => { $('#xAltaCaja').hidden = true; guardarExterna(); };
+$('#xAltaNo').onclick = () => {
+  D.provGenerico = $('#xTaller').value.trim();
+  $('#xAltaCaja').hidden = true;
+  $('#avisoExterna').innerHTML = '';
+  pistaProveedor();
+};
 $('#xAltaSi').onclick = async () => {
   const nombre = $('#xTaller').value.trim();
   const cuit = soloDigitos($('#xAltaCuit').value);
@@ -1532,7 +1550,7 @@ $('#xAltaSi').onclick = async () => {
       [{id: d.id, nombre, cuit: conGuiones, rubros: ['servicios']}]);
     opcionesProveedor();
     elegirProveedor(d.id);
-    await guardarExterna();
+    $('#avisoExterna').innerHTML = `<div class="aviso bien">${esc(nombre)} dado de alta en el registro de proveedores.</div>`;
   } catch (e) {
     $('#avisoExterna').innerHTML = `<div class="aviso mal">${esc(e.message)}</div>`;
   } finally {
