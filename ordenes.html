@@ -122,6 +122,9 @@
     border:1px solid rgba(227,93,98,.3)}
   .aviso.bien{background:rgba(49,189,101,.12);color:var(--ok);
     border:1px solid rgba(49,189,101,.3)}
+  .alta-prov{background:var(--surface-2);border:1px solid var(--hairline);
+    border-radius:12px;padding:12px}
+  .alta-prov p{margin:0 0 10px;font-size:13px}
 
   /* La ficha de la orden abierta: cabecera, trabajos y repuestos. */
   .ficha-cab{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
@@ -444,9 +447,20 @@
     <div><label>Nº de factura</label><input id="xFactura" placeholder="0001-00012345"></div>
     <div><label id="xMontoRotulo">Monto sin IVA</label><input id="xMonto" type="number" min="0" step="0.01"></div>
     <div class="solo-una"><label>Kilómetros</label><input id="xKm" type="number" min="0" step="1" required></div>
-    <div><label>Proveedor</label><select id="xProveedor"><option value="">No está en el registro</option></select>
-      <p class="pista" id="xProveedorPista">Los proveedores se cargan en Parámetros.</p></div>
-    <div id="xTallerCaja"><label>Taller o proveedor (fuera del registro)</label><input id="xTaller" placeholder="Nextruck, Iveco Catamarca…"></div>
+    <div><label>Proveedor</label>
+      <input id="xTaller" list="xProveedores" autocomplete="off" placeholder="Nombre o CUIT">
+      <datalist id="xProveedores"></datalist><input type="hidden" id="xProveedor">
+      <p class="pista" id="xProveedorPista"></p></div>
+    <div class="ancho alta-prov" id="xAltaCaja" hidden>
+      <p id="xAltaTexto"></p>
+      <div class="campos">
+        <div><label>CUIT</label><input id="xAltaCuit" inputmode="numeric" placeholder="30-12345678-9"></div>
+      </div>
+      <div class="barra" style="margin:10px 0 0">
+        <button class="btn" type="button" id="xAltaSi">Dar de alta y guardar</button>
+        <button class="btn alt" type="button" id="xAltaNo">Guardar como proveedor genérico</button>
+      </div>
+    </div>
     <div class="ancho solo-una"><label>Qué se hizo</label>
       <textarea id="xDetalle" placeholder="Service M6, cambio de filtros, reparación de caja…"></textarea></div>
   </div>
@@ -1135,22 +1149,38 @@ $('#guardarNueva').onclick = async () => {
   }
 };
 
-/* El proveedor: el del registro, o escrito a mano si no está. */
+/* El proveedor se escribe o se elige de la lista. Si coincide con uno
+   del registro (por nombre o por CUIT) queda atado a él; si no, al
+   guardar se pregunta si se da de alta o va como proveedor genérico. */
+const soloDigitos = v => String(v || '').replace(/\D/g, '');
 function opcionesProveedor() {
   const lista = D.datos?.proveedores || [];
-  $('#xProveedor').innerHTML = '<option value="">No está en el registro</option>' +
-    lista.map(p => `<option value="${p.id}">${esc(p.nombre)}${p.cuit ? ' · ' + esc(p.cuit) : ''}</option>`).join('');
-  $('#xProveedorPista').textContent = lista.length ? 'Los proveedores se cargan en Parámetros.'
-    : 'Sin proveedores cargados. Se cargan en Parámetros.';
+  $('#xProveedores').innerHTML = lista.map(p =>
+    `<option value="${esc(p.nombre)}">${p.cuit ? 'CUIT ' + esc(p.cuit) : ''}</option>`).join('');
+}
+function pistaProveedor() {
+  const p = (D.datos?.proveedores || []).find(x => String(x.id) === $('#xProveedor').value);
+  $('#xProveedorPista').textContent = p ? 'En el registro' + (p.cuit ? ' · CUIT ' + p.cuit : '') + '.'
+    : $('#xTaller').value.trim() ? 'No está en el registro de proveedores.'
+    : (D.datos?.proveedores || []).length ? '' : 'Sin proveedores en el registro.';
 }
 function elegirProveedor(id) {
-  $('#xProveedor').value = id ? String(id) : '';
-  $('#xProveedor').onchange();
-}
-$('#xProveedor').onchange = () => {
-  const p = (D.datos?.proveedores || []).find(x => String(x.id) === $('#xProveedor').value);
-  $('#xTallerCaja').hidden = !!p;
+  const p = (D.datos?.proveedores || []).find(x => String(x.id) === String(id || ''));
+  $('#xProveedor').value = p ? String(p.id) : '';
   if (p) $('#xTaller').value = p.nombre;
+  $('#xAltaCaja').hidden = true;
+  pistaProveedor();
+}
+$('#xTaller').oninput = () => {
+  const texto = $('#xTaller').value.trim();
+  const cuit = soloDigitos(texto);
+  const lista = D.datos?.proveedores || [];
+  const p = lista.find(x => x.nombre.toLowerCase() === texto.toLowerCase())
+    || (cuit.length === 11 && lista.find(x => soloDigitos(x.cuit) === cuit));
+  $('#xProveedor').value = p ? String(p.id) : '';
+  if (p && $('#xTaller').value !== p.nombre) $('#xTaller').value = p.nombre;
+  $('#xAltaCaja').hidden = true;
+  pistaProveedor();
 };
 const proveedorPorNombre = nombre => ((D.datos?.proveedores || [])
   .find(p => p.nombre.toLowerCase() === String(nombre || '').trim().toLowerCase()) || {}).id;
@@ -1161,6 +1191,7 @@ $('#nuevaExterna').onclick = () => {
   $('#xMantenimiento').value = '';
   ['xFactura','xMonto','xKm','xTaller','xDetalle','xSolicitud','xGestion']
     .forEach(c => $('#' + c).value = '');
+  D.cuitLeido = '';
   opcionesProveedor(); elegirProveedor(null);
   $('#cajaSolicitud').hidden = true;
   limpiarLector();
@@ -1388,12 +1419,14 @@ function volcarFactura(f) {
   };
   /* El proveedor: el servidor lo buscó en el registro por CUIT o por
      nombre parecido. Si no está, queda el nombre leído escrito a mano. */
+  D.cuitLeido = f.cuit || '';
   if (f.proveedor_id) {
     elegirProveedor(f.proveedor_id);
-    $('#xProveedor').classList.add('campo-leido');
+    $('#xTaller').classList.add('campo-leido');
   } else {
     elegirProveedor(null);
     poner('xTaller', f.taller);
+    pistaProveedor();
   }
   poner('xFactura', f.factura);
   poner('xFecha', f.fecha);
@@ -1427,7 +1460,7 @@ function volcarFactura(f) {
   if (faltan.length) dudas.unshift('No se pudo leer ' + faltan.join(', ') + '.');
   if (f.moneda && f.moneda !== 'ARS') dudas.unshift(`La factura está en ${esc(f.moneda)}, no en pesos.`);
   if (!f.proveedor_id && f.taller)
-    dudas.push(`Proveedor fuera del registro: ${f.taller}. Puede cargarse en Parámetros para que se reconozca en las próximas facturas.`);
+    dudas.push(`Proveedor fuera del registro: ${f.taller}. Al guardar se ofrece darlo de alta.`);
   else if (f.proveedor_como === 'parecido')
     dudas.push(`Proveedor reconocido por nombre parecido: «${f.taller}» se tomó como ${f.proveedor}. Revisar que sea el correcto.`);
 
@@ -1460,7 +1493,53 @@ $('#xUnidad').onchange = () => {
   const u = D.datos.unidades.find(x => String(x.id) === $('#xUnidad').value);
   if (u && !$('#xKm').value && u.km_actual) $('#xKm').value = Math.round(u.km_actual);
 };
-$('#guardarExterna').onclick = async () => {
+$('#guardarExterna').onclick = () => {
+  $('#avisoExterna').innerHTML = '';
+  const nombre = $('#xTaller').value.trim();
+  if (nombre && !$('#xProveedor').value) {
+    $('#xAltaTexto').textContent = `«${nombre}» no está en el registro de proveedores.`;
+    $('#xAltaCuit').value = D.cuitLeido || '';
+    $('#xAltaCaja').hidden = false;
+    $('#xAltaCaja').scrollIntoView({block: 'nearest'});
+    return;
+  }
+  guardarExterna();
+};
+$('#xAltaNo').onclick = () => { $('#xAltaCaja').hidden = true; guardarExterna(); };
+$('#xAltaSi').onclick = async () => {
+  const nombre = $('#xTaller').value.trim();
+  const cuit = soloDigitos($('#xAltaCuit').value);
+  if (cuit.length !== 11) {
+    $('#avisoExterna').innerHTML = '<div class="aviso mal">El CUIT tiene que tener 11 dígitos.</div>';
+    return;
+  }
+  const conGuiones = `${cuit.slice(0, 2)}-${cuit.slice(2, 10)}-${cuit.slice(10)}`;
+  const repetido = (D.datos?.proveedores || []).find(x => soloDigitos(x.cuit) === cuit);
+  if (repetido) {
+    $('#avisoExterna').innerHTML = `<div class="aviso mal">El CUIT ${conGuiones} ya está en el
+      registro como ${esc(repetido.nombre)}. Se tomó ese proveedor.</div>`;
+    elegirProveedor(repetido.id);
+    return;
+  }
+  $('#xAltaSi').disabled = true;
+  try {
+    const r = await fetch('/api/fluidos', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({op: 'proveedor', nombre, cuit: conGuiones, rubros: ['servicios']})});
+    const d = await r.json().catch(() => ({error: 'Respuesta ilegible del servidor.'}));
+    if (!r.ok) throw new Error(d.error || 'No se pudo dar de alta el proveedor.');
+    D.datos.proveedores = (D.datos.proveedores || []).concat(
+      [{id: d.id, nombre, cuit: conGuiones, rubros: ['servicios']}]);
+    opcionesProveedor();
+    elegirProveedor(d.id);
+    await guardarExterna();
+  } catch (e) {
+    $('#avisoExterna').innerHTML = `<div class="aviso mal">${esc(e.message)}</div>`;
+  } finally {
+    $('#xAltaSi').disabled = false;
+  }
+};
+async function guardarExterna() {
   $('#guardarExterna').disabled = true;
   try {
     const comun = {
@@ -1495,7 +1574,7 @@ $('#guardarExterna').onclick = async () => {
   } finally {
     $('#guardarExterna').disabled = false;
   }
-};
+}
 
 
 /* =====================================================================
