@@ -18,6 +18,7 @@ import base64
 import re
 
 import permisos
+import stock_minimo
 
 # Lo que un navegador sabe dibujar y no trae sorpresas. El SVG se acepta
 # porque muchos logos de marca vienen así y pesan nada.
@@ -282,7 +283,8 @@ def aplicar(cx, datos, usuario=None):
     """Punto de entrada de la API."""
     op = (datos.get("op") or "").strip()
     acciones = {"guardar": guardar, "borrar": borrar, "borrar_logo": borrar_logo,
-                "medida_guardar": guardar_medida, "medida_borrar": borrar_medida}
+                "medida_guardar": guardar_medida, "medida_borrar": borrar_medida,
+                "stock_guardar": stock_minimo.guardar, "stock_borrar": stock_minimo.borrar}
     if op in acciones:
         return acciones[op](cx, datos, usuario)
     raise ValueError("No entiendo qué hay que hacer con la marca.")

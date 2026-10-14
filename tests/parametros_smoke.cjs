@@ -77,6 +77,12 @@ const marcas = () => ({
     {id: 2, medida: '600x9', corta: '600', clase: 'autoelevador',
      descripcion: null, activa: true, orden: 10, cubiertas: 0},
   ],
+  stock_minimo: [
+    {id: 1, medida: '295', marca: 'Fate', tipo: null, condicion: null, minimo: 10,
+     activa: true, nota: null, hay: 12, falta: false, nombre: '295 · Fate'},
+    {id: 2, medida: '295', marca: null, tipo: 'direccion', condicion: 'nueva', minimo: 5,
+     activa: true, nota: null, hay: 2, falta: true, nombre: '295 · dirección · nueva'},
+  ],
   puede_gestionar: true,
 });
 
@@ -291,6 +297,27 @@ const marcas = () => ({
     assert.equal(medida.medida, '11R22.5');
     assert.equal(medida.clase, 'camion');
 
+    // El stock mínimo: lo que hay contra el mínimo, y una regla nueva con
+    // medida, tipo y condición.
+    const stock = (await page.locator('#stock-reglas').innerText()).toLowerCase();
+    assert(stock.includes('295 · dirección · nueva') && stock.includes('faltan 3'),
+           `la regla por debajo tiene que decir cuántas faltan: ${stock}`);
+    assert(stock.includes('en orden'), 'la regla cumplida tiene que verse en orden');
+    await page.click('#stock-nueva');
+    await page.selectOption('#s-medida', '295');
+    await page.selectOption('#s-marca', 'Fate');
+    await page.selectOption('#s-tipo', 'traccion');
+    await page.selectOption('#s-condicion', 'recapada');
+    await page.fill('#s-minimo', '8');
+    await page.click('#stock-form button[type="submit"]');
+    await page.waitForTimeout(200);
+    const regla = pedidos.find(p => p.op === 'stock_guardar');
+    assert.deepEqual([regla.medida, regla.marca, regla.tipo, regla.condicion, regla.minimo],
+                     ['295', 'Fate', 'traccion', 'recapada', '8']);
+    await page.click('[data-stock="2"]');
+    assert.equal(await page.inputValue('#s-tipo'), 'direccion');
+    assert.equal(await page.inputValue('#s-minimo'), '5');
+
     await page.setViewportSize({width: 390, height: 844});
     assert(!await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
            'la pantalla de parámetros desborda a lo ancho en el celular');
@@ -300,7 +327,7 @@ const marcas = () => ({
                 'umbrales del que administra, parámetros a la vista con editar y '+
                 'restablecer, combustible traído de un link, proveedores y fluidos, ' +
                 'marcas con logo que se dan de baja en vez de borrarse, medidas con ' +
-                'su familia y celular.');
+                'su familia, stock mínimo de cubiertas y celular.');
   } finally {
     await browser.close();
   }

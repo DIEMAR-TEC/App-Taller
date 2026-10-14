@@ -89,6 +89,8 @@ def base_con(**cambios):
         # avisar: esas alertas son por fluido, no por unidad, y esta base
         # arma una alerta de cada una de las fuentes por unidad.
         "from v_fluidos_saldo": [],
+        # El stock mínimo de cubiertas, instalado y sin reglas.
+        "from cubiertas_stock_minimo": [],
     }
     respuestas.update(cambios)
     return BaseFalsa(respuestas)

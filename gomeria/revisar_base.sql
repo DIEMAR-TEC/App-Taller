@@ -136,7 +136,9 @@ with esperado(script, objeto, columna) as (values
   ('35_seguridad.sql', 'usuarios', 'totp_respaldo'),
   ('35_seguridad.sql', 'usuarios', 'totp_secreto'),
   ('35_seguridad.sql', 'usuarios', 'totp_ultimo'),
-  ('37_asistente_cupo.sql', 'consultas_asistente', null)
+  ('37_asistente_cupo.sql', 'consultas_asistente', null),
+  ('51_stock_minimo_cubiertas.sql', 'cubiertas', 'tipo'),
+  ('51_stock_minimo_cubiertas.sql', 'cubiertas_stock_minimo', null)
 ),
 faltan as (
   select script,

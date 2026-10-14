@@ -54,6 +54,7 @@ import ordenes as ots
 import proveedores as prov
 import enganches as eng
 import marcas as mcs
+import stock_minimo as stm
 import parametros as par
 import permisos
 import solicitudes as sol
@@ -962,6 +963,11 @@ class App(CupoPorPedido, gom.Handler):
                     salida = {"marcas": mcs.listar(cx, todas),
                               "medidas": mcs.medidas(cx, todas),
                               "puede_gestionar": permisos.gestiona(self.usuario)}
+                    # El stock mínimo, solo para la parametrización. Sin
+                    # 51_stock_minimo_cubiertas.sql corrido va en null.
+                    if todas:
+                        salida["stock_minimo"] = (stm.reglas(cx) if stm.instalado(cx)
+                                                  else None)
                     return self._responder(gom.jstr(salida))
             except (psycopg.errors.UndefinedTable, psycopg.errors.UndefinedColumn) as e:
                 return self._error(base.que_falta(e,

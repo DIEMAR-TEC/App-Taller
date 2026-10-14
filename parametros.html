@@ -93,6 +93,7 @@
     font-weight:800;text-transform:uppercase;letter-spacing:.5px}
   .marca.preventivo{color:var(--ok);background:rgba(49,189,101,.12)}
   .marca.correctivo{color:var(--warn);background:rgba(240,180,41,.13)}
+  .marca.falta{color:var(--bad);background:rgba(227,93,98,.12)}
   .marca.prefiltro{color:var(--brand);background:color-mix(in srgb,var(--brand) 14%,transparent)}
   .accion{border:0;background:none;color:var(--ink-muted);cursor:pointer;font:inherit;
     font-size:12px;text-decoration:underline;padding:0 7px 0 0}
@@ -371,6 +372,54 @@
         <th>Medida</th><th>Familia</th><th class="num">Cubiertas</th><th>Estado</th><th></th>
       </tr></thead><tbody id="medidas"></tbody></table>
       <p class="vacio" id="medidas-vacio" hidden>Todavía no hay medidas cargadas.</p>
+    </div>
+
+    <div class="caja">
+      <h2>Stock mínimo de cubiertas</h2>
+      <p class="que">Cantidad mínima en el depósito por medida, marca, tipo y condición. Por
+        debajo del mínimo se genera una alerta. Marca, tipo o condición sin especificar
+        abarcan todas. Cuentan las cubiertas en estado stock, sin montar. El tipo se
+        asigna a cada cubierta en Gomería → Stock de cubiertas.</p>
+      <p class="aviso mal" id="stock-falta-sql" hidden>Falta correr
+        gomeria/51_stock_minimo_cubiertas.sql en Supabase.</p>
+      <div class="fila" style="margin:0 0 14px">
+        <button class="btn" id="stock-nueva">+ Nueva regla</button>
+      </div>
+
+      <form id="stock-form" hidden style="background:var(--surface-2);
+        border:1px solid var(--hairline-2);border-radius:12px;padding:15px;margin-bottom:16px">
+        <div class="campos">
+          <div><label>Medida</label><select id="s-medida" required></select></div>
+          <div><label>Marca</label><select id="s-marca"></select></div>
+          <div><label>Tipo</label><select id="s-tipo">
+            <option value="">Cualquiera</option>
+            <option value="direccion">Dirección</option>
+            <option value="traccion">Tracción</option>
+            <option value="mixta">Mixta</option>
+          </select></div>
+          <div><label>Condición</label><select id="s-condicion">
+            <option value="">Nueva o recapada</option>
+            <option value="nueva">Nueva</option>
+            <option value="recapada">Recapada</option>
+          </select></div>
+          <div><label>Mínimo</label><input id="s-minimo" type="number" min="1" step="1" required></div>
+          <div><label>Nota</label><input id="s-nota" maxlength="300"></div>
+          <div class="ancho">
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;
+              font-size:13px;letter-spacing:0">
+              <input type="checkbox" id="s-activa" checked style="width:auto">
+              Regla activa</label></div>
+        </div>
+        <div class="fila">
+          <button class="btn" type="submit">Guardar regla</button>
+          <button class="btn alt" type="button" id="stock-cancelar">Cancelar</button>
+        </div>
+      </form>
+
+      <table><thead><tr>
+        <th>Regla</th><th class="num">Hay</th><th class="num">Mínimo</th><th>Estado</th><th></th>
+      </tr></thead><tbody id="stock-reglas"></tbody></table>
+      <p class="vacio" id="stock-vacio" hidden>Sin reglas de stock mínimo.</p>
     </div>
   </section>
 
@@ -907,7 +956,7 @@ $('#xl-importar').onclick = async () => {
    Render se borra en cada publicación, así que un archivo dejado a mano
    duraría hasta el próximo deploy.
    ==================================================================== */
-const G = {datos: null, marca: null, medida: null, logo: null};
+const G = {datos: null, marca: null, medida: null, logo: null, stock: null};
 const CLASE = {camion: 'Camión', autoelevador: 'Autoelevador', otro: 'Otro'};
 
 async function apiMarcas(op, extra) {
@@ -962,7 +1011,66 @@ function pintarGomeria() {
         ${m.cubiertas ? '' : `<button class="accion" data-borrar-medida="${m.id}">Borrar</button>`}` : ''}</td>
     </tr>`).join('');
   $('#medidas-vacio').hidden = d.medidas.length > 0;
+  pintarStockMinimo();
 }
+
+/* Stock mínimo: una regla por combinación de medida, marca, tipo y
+   condición. El servidor devuelve cuántas hay hoy de cada una. */
+function pintarStockMinimo() {
+  const d = G.datos, reglas = d.stock_minimo;
+  const puede = !!d.puede_gestionar && reglas != null;
+  $('#stock-falta-sql').hidden = reglas != null;
+  $('#stock-nueva').disabled = !puede;
+  $('#stock-reglas').innerHTML = (reglas || []).map(r => `
+    <tr>
+      <td><b>${esc(r.nombre)}</b>${r.nota ? `<div class="chico">${esc(r.nota)}</div>` : ''}</td>
+      <td class="num">${r.hay}</td>
+      <td class="num">${r.minimo}</td>
+      <td>${!r.activa ? '<span class="chico">inactiva</span>'
+        : r.falta ? `<span class="marca falta">faltan ${r.minimo - r.hay}</span>`
+        : '<span class="marca preventivo">en orden</span>'}</td>
+      <td>${puede ? `<button class="accion" data-stock="${r.id}">Editar</button>
+        <button class="accion" data-borrar-stock="${r.id}">Borrar</button>` : ''}</td>
+    </tr>`).join('');
+  $('#stock-vacio').hidden = (reglas || []).length > 0;
+}
+
+function formStock(regla) {
+  G.stock = regla;
+  const d = G.datos;
+  const cortas = [...new Set(d.medidas.filter(m => m.activa || (regla && m.corta === regla.medida))
+    .map(m => m.corta).filter(Boolean))];
+  if (regla && !cortas.includes(regla.medida)) cortas.push(regla.medida);
+  $('#s-medida').innerHTML = cortas.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  const marcas = d.marcas.filter(m => m.activa).map(m => m.nombre);
+  if (regla && regla.marca && !marcas.includes(regla.marca)) marcas.push(regla.marca);
+  $('#s-marca').innerHTML = '<option value="">Cualquiera</option>' +
+    marcas.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+  $('#stock-form').hidden = false;
+  $('#s-medida').value = regla ? regla.medida : (cortas[0] || '');
+  $('#s-marca').value = (regla && regla.marca) || '';
+  $('#s-tipo').value = (regla && regla.tipo) || '';
+  $('#s-condicion').value = (regla && regla.condicion) || '';
+  $('#s-minimo').value = regla ? regla.minimo : '';
+  $('#s-nota').value = (regla && regla.nota) || '';
+  $('#s-activa').checked = regla ? !!regla.activa : true;
+  $('#s-medida').focus();
+}
+
+$('#stock-form').onsubmit = async e => {
+  e.preventDefault();
+  const datos = {
+    medida: $('#s-medida').value, marca: $('#s-marca').value, tipo: $('#s-tipo').value,
+    condicion: $('#s-condicion').value, minimo: $('#s-minimo').value,
+    nota: $('#s-nota').value, activa: $('#s-activa').checked};
+  if (G.stock) datos.id = G.stock.id;
+  try {
+    await apiMarcas('stock_guardar', datos);
+    $('#stock-form').hidden = true;
+    await cargarGomeria();
+    aviso('Regla guardada.', true);
+  } catch (err) { aviso(err.message); }
+};
 
 function formMarca(marca) {
   G.marca = marca; G.logo = null;
@@ -1039,6 +1147,18 @@ document.addEventListener('click', async ev => {
   if (ev.target.id === 'marca-cancelar') { $('#marca-form').hidden = true; return; }
   if (ev.target.id === 'medida-nueva') return formMedida(null);
   if (ev.target.id === 'medida-cancelar') { $('#medida-form').hidden = true; return; }
+  if (ev.target.id === 'stock-nueva') return formStock(null);
+  if (ev.target.id === 'stock-cancelar') { $('#stock-form').hidden = true; return; }
+  const editarS = ev.target.closest('[data-stock]');
+  if (editarS)
+    return formStock(G.datos.stock_minimo.find(r => String(r.id) === editarS.dataset.stock));
+  const borrarS = ev.target.closest('[data-borrar-stock]');
+  if (borrarS) {
+    if (!confirm('¿Borrar la regla?')) return;
+    try { await apiMarcas('stock_borrar', {id: borrarS.dataset.borrarStock}); await cargarGomeria(); }
+    catch (e) { aviso(e.message); }
+    return;
+  }
   if (ev.target.id === 'marca-sin-logo') {
     if (!G.marca || !confirm('¿Quitar el logo? La pantalla vuelve a mostrar el nombre.')) return;
     try {

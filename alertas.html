@@ -111,7 +111,7 @@
   .marca.vencimiento{color:var(--cyan);background:color-mix(in srgb,var(--cyan) 12%,transparent)}
   .marca.service,.marca.prefiltro{color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent)}
   .marca.combustible{color:light-dark(#6d28d9,#c48cf0);background:color-mix(in srgb,light-dark(#6d28d9,#c48cf0) 12%,transparent)}
-  .marca.cubierta{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+  .marca.cubierta,.marca.stock{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
   .ir{color:var(--ink-muted);text-decoration:none;font-size:12px;white-space:nowrap}
   .ir:hover{color:var(--brand)}
   @media(max-width:700px){.alerta{flex-direction:column}.alerta .acciones{width:100%}}
@@ -188,6 +188,7 @@
         <option value="prefiltro">Prefiltros</option>
         <option value="combustible">Combustible</option>
         <option value="cubierta">Cubiertas</option>
+        <option value="stock">Stock de cubiertas</option>
       </select>
       <button class="accion espacio" id="verCalladas">ver las silenciadas</button>
     </div>
@@ -318,7 +319,7 @@ const fecha = f => f ? new Date(f + 'T12:00:00').toLocaleDateString('es-AR',
 
 const D = {datos:null, filtro:'', usuario:null, callando:null, verCalladas:false};
 const FUENTES = {vencimiento:'Vencimiento', service:'Service', prefiltro:'Prefiltro',
-                 combustible:'Combustible', cubierta:'Cubierta'};
+                 combustible:'Combustible', cubierta:'Cubierta', stock:'Stock de cubiertas'};
 
 async function api(cuerpo) {
   const r = await fetch('/api/alertas', {method:'POST',

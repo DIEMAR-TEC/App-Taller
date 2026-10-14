@@ -676,6 +676,26 @@ def alta_cubierta(cx, codigo, **datos):
     return fila["id"]
 
 
+TIPOS_CUBIERTA = ("direccion", "traccion", "mixta")
+
+
+def cambiar_tipo(cx, ids, tipo):
+    """Marca para qué eje está hecha la cubierta. Vacío = sin definir."""
+    if not hay_columna(cx, "cubiertas", "tipo"):
+        raise ValueError("Falta correr gomeria/51_stock_minimo_cubiertas.sql en Supabase.")
+    tipo = str(tipo or "").strip().lower() or None
+    if tipo and tipo not in TIPOS_CUBIERTA:
+        raise ValueError("El tipo es dirección, tracción o mixta.")
+    try:
+        ids = [int(i) for i in ids]
+    except (TypeError, ValueError):
+        raise ValueError("Las cubiertas no son válidas.") from None
+    if not ids:
+        raise ValueError("No hay cubiertas para cambiar.")
+    cx.execute("update cubiertas set tipo = %s where id = any(%s)", (tipo, ids))
+    return len(ids)
+
+
 def _numero_o_none(valor):
     try:
         return float(str(valor).replace(",", ".")) if valor not in (None, "") else None

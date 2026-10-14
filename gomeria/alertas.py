@@ -19,6 +19,7 @@ esa fuente y lo dice, no la pantalla entera.
 import math
 
 import permisos
+import stock_minimo
 
 # El orden en que se miran las cosas. Es el de la consecuencia: un papel
 # vencido puede parar el camión en un control de ruta hoy, un service
@@ -34,10 +35,11 @@ SEVERIDADES = {"grave": 0, "media": 1, "leve": 2}
 # Los fluidos van arriba de todo a igual gravedad: sin urea o sin aceite
 # un camión no queda a medias, queda parado antes de salir. Y se resuelve
 # con un llamado al proveedor, si se avisa a tiempo.
-PRIORIDAD = {"fluido": 0, "vencimiento": 1, "cubierta": 2, "service": 3,
-             "prefiltro": 4, "combustible": 5}
+PRIORIDAD = {"fluido": 0, "vencimiento": 1, "cubierta": 2, "stock": 3, "service": 4,
+             "prefiltro": 5, "combustible": 6}
 
-FUENTES = ("vencimiento", "service", "prefiltro", "combustible", "cubierta", "fluido")
+FUENTES = ("vencimiento", "service", "prefiltro", "combustible", "cubierta", "fluido",
+           "stock")
 
 # De qué es cada registro de la tabla services. El prefiltro se anota en la
 # misma tabla, pero corre con su propio plan (ver 44_prefiltros.sql).
@@ -51,6 +53,7 @@ DONDE = {
     "combustible": ("Combustible",  "/combustible"),
     "cubierta":    ("Gomería",      "/gomeria#wear"),
     "fluido":      ("Fluidos",      "/combustible#fluidos"),
+    "stock":       ("Stock de cubiertas", "/gomeria#stock"),
 }
 
 
@@ -378,10 +381,21 @@ def _prefiltros(cx):
     return _services(cx, "v_prefiltros_hoy", "prefiltro", "Cambio de prefiltro")
 
 
+def _stock(cx):
+    """Las cubiertas del depósito por debajo del mínimo parametrizado."""
+    try:
+        if not stock_minimo.instalado(cx):
+            return None
+        return stock_minimo.alertas(cx)
+    except Exception:
+        cx.rollback()
+        return None
+
+
 LECTORES = {"vencimiento": _vencimientos, "service": _services,
             "prefiltro": _prefiltros,
             "combustible": _combustible, "cubierta": _cubiertas,
-            "fluido": _fluidos}
+            "fluido": _fluidos, "stock": _stock}
 
 
 # =====================================================================

@@ -557,6 +557,8 @@ class Handler(BaseHTTPRequestHandler):
                     remanente_mm=remanente, costo_compra=costo, cargar_a_unidad=True,
                     observaciones=str(datos.get("observaciones") or "").strip() or None,
                     usuario=self.usuario["nombre"], nota="Alta desde el inventario")
+                if datos.get("tipo"):
+                    base.cambiar_tipo(cx, [cubierta_id], datos.get("tipo"))
             elif op == "estado":
                 cubierta_id = int(datos.get("id") or 0)
                 base.cambiar_estado_cubierta(
@@ -595,6 +597,12 @@ class Handler(BaseHTTPRequestHandler):
                 cubierta_id = int(datos.get("id") or 0)
                 base.cambiar_codigo(cx, cubierta_id, datos.get("codigo"),
                                     usuario=self.usuario["nombre"])
+            elif op == "tipo":
+                # Para qué eje está hecha: de a una desde la ficha, o de a
+                # muchas desde la lista filtrada del stock.
+                ids = datos.get("ids") or []
+                base.cambiar_tipo(cx, ids, datos.get("tipo"))
+                cubierta_id = ids[0] if len(ids) == 1 else None
             elif op == "criterio":
                 cubierta_id = None
                 desgaste.guardar_criterio(cx, str(datos.get("funcion") or ""),
