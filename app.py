@@ -121,6 +121,8 @@ PANTALLAS = {
     # La barra de arriba: los accesos de administración, en todas las
     # pantallas y para el que los tenga habilitados.
     "/barra.js":    ("barra.js",                "text/javascript; charset=utf-8"),
+    # La lista de módulos a la izquierda, en todas las pantallas.
+    "/lateral.js":  ("lateral.js",              "text/javascript; charset=utf-8"),
 }
 
 
@@ -281,7 +283,13 @@ class App(CupoPorPedido, gom.Handler):
             # pantallas, no solo en la portada: el que maneja el sistema no
             # tiene por qué volver al inicio para llegar a ellos.
             barra = '' if 'src="/barra.js"' in html else '<script defer src="/barra.js"></script>'
-            estilos = tema + barra + '<link rel="stylesheet" href="/sistema.css">'
+            # La lista de módulos a la izquierda, en todas las pantallas:
+            # saltar de Gomería a Repuestos era volver al inicio y entrar de
+            # nuevo. Va sin defer, como tema.js, porque marca el <html>
+            # antes de que se pinte: si esperara, el contenido aparecería
+            # pegado al borde y pegaría un salto al correrse.
+            lateral = '' if 'src="/lateral.js"' in html else '<script src="/lateral.js"></script>'
+            estilos = tema + barra + lateral + '<link rel="stylesheet" href="/sistema.css">'
             # El logo de la empresa en la solapa del navegador. Va acá y no
             # en cada archivo porque cada pantalla que se agregue se lo iba
             # a olvidar: Gomería y Configuración no lo tenían, y en la

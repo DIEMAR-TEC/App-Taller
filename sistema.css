@@ -93,6 +93,91 @@ body .sidebar .nav a.primary,body .sidebar .nav a[aria-current="page"]{backgroun
 body .sidebar .nav a svg{stroke:currentColor}
 body .sidebar :focus-visible{outline-color:#fff!important}
 
+/* ---------- La barra lateral, en todas las pantallas ----------
+   La arma lateral.js. La portada ya tenía la suya adentro de una grilla;
+   las demás reciben una fija y hay que correrles el cuerpo, por eso el
+   margen va en el <body>: así la pantalla conserva su propio relleno.
+
+   El <html> llega marcado desde el encabezado, antes de que se pinte
+   nada: si el ancho se pusiera recién al armar la barra, el contenido
+   aparecería pegado al borde y pegaría un salto. */
+:root{--tf-lateral:230px; --tf-lateral-chica:66px}
+
+html[data-lateral-fija] body>aside.lateral{position:fixed;top:0;bottom:0;left:0;
+  width:var(--tf-lateral);padding:20px 14px;overflow-y:auto;overflow-x:hidden;
+  display:flex;flex-direction:column;border-right:1px solid var(--tf-nav-line);
+  /* Debajo de cualquier velo de modal (usan de 20 para arriba) y encima
+     del contenido: un diálogo tiene que tapar también la navegación. */
+  z-index:15}
+
+/* El armado de adentro. La portada lo tiene en su propio <style>; acá hace
+   falta de nuevo porque esta barra la arma el servidor en pantallas que
+   nunca tuvieron una. Va acotado a .lateral para no pisarle nada a la
+   portada, que ya resolvió el suyo. */
+aside.lateral .brand{display:flex;align-items:center;gap:11px;
+  padding:0 6px 20px;border-bottom:1px solid var(--tf-nav-line)}
+aside.lateral .nav-label{margin:20px 7px 10px;font-size:10px;font-weight:700;
+  letter-spacing:1.8px;text-transform:uppercase}
+aside.lateral .nav{display:grid;gap:5px}
+/* Un módulo que el rol no tiene se esconde poniéndole [hidden] (lo hace
+   lateral.js con lo que contesta /api/yo). Sin esto no alcanza: el
+   display:flex de abajo le gana a la regla del navegador y el enlace se
+   seguía viendo. La portada lo resuelve con la misma regla en su propio
+   archivo; estas pantallas no la tienen. */
+aside.lateral .nav a[hidden]{display:none!important}
+aside.lateral .nav a{display:flex;align-items:center;gap:12px;padding:11px 10px;
+  text-decoration:none;font-weight:500;font-size:13.5px;white-space:nowrap;
+  transition:.18s background,.18s color}
+aside.lateral .nav a svg{width:19px;height:19px;flex:none;stroke:currentColor;fill:none}
+aside.lateral .ajustes{margin-top:auto;display:flex;align-items:center;gap:12px;
+  padding:11px 10px;text-decoration:none;font-size:13px;font-weight:500;
+  border:1px solid transparent;border-radius:var(--tf-radius-sm);white-space:nowrap}
+aside.lateral .ajustes svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none}
+aside.lateral .ajustes[aria-current="page"]{background:var(--brand)!important;
+  color:#fff!important;border-color:var(--brand)!important}
+html[data-lateral-fija][data-lateral="abierta"] body{margin-left:var(--tf-lateral)}
+html[data-lateral-fija][data-lateral="chica"] body{margin-left:var(--tf-lateral-chica)}
+html[data-lateral-fija][data-lateral="chica"] body>aside.lateral{width:var(--tf-lateral-chica);padding:20px 9px}
+
+/* Encogida: quedan los íconos. El nombre del módulo sigue estando para el
+   lector de pantalla y en el title, pero no ocupa ancho. */
+html[data-lateral="chica"] .sidebar :is(.nav a span,.ajustes span,.side-footer){
+  position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+html[data-lateral="chica"] .sidebar :is(.nav a,.ajustes){justify-content:center;padding-left:0;padding-right:0}
+html[data-lateral="chica"] .sidebar .brand{justify-content:center;padding-left:0;padding-right:0}
+html[data-lateral="chica"] .sidebar .brand img{max-width:40px!important}
+html[data-lateral="chica"] .sidebar .nav-label{justify-content:center}
+html[data-lateral="chica"] .sidebar .nav-label span{display:none}
+
+/* La portada no tiene barra fija: encoge su columna de la grilla. */
+html[data-lateral="chica"] body.operations-home .shell{grid-template-columns:var(--tf-lateral-chica) minmax(0,1fr)}
+
+/* El botón de ocultar, en la fila del rótulo «Módulos». */
+body .sidebar .nav-label{display:flex;align-items:center;justify-content:space-between;gap:8px}
+body .sidebar .lateral-boton{flex:none;display:grid;place-items:center;width:26px;height:26px;padding:0;
+  border:1px solid var(--tf-nav-line);border-radius:var(--tf-radius-sm);background:transparent;
+  color:var(--tf-nav-muted);cursor:pointer}
+body .sidebar .lateral-boton:hover{color:var(--tf-nav-ink);background:var(--tf-nav-hover)}
+body .sidebar .lateral-boton svg{width:15px;height:15px}
+
+/* En el teléfono no se le come el ancho a la pantalla: queda la tira de
+   íconos y el cuerpo arranca al lado. */
+@media(max-width:860px){
+  html[data-lateral-fija][data-lateral] body{margin-left:var(--tf-lateral-chica)}
+  html[data-lateral-fija][data-lateral] body>aside.lateral{width:var(--tf-lateral-chica);padding:14px 9px}
+  html[data-lateral-fija] .sidebar :is(.nav a span,.ajustes span,.side-footer){
+    position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  html[data-lateral-fija] .sidebar :is(.nav a,.ajustes,.brand,.nav-label){justify-content:center;padding-left:0;padding-right:0}
+  html[data-lateral-fija] .sidebar .brand img{max-width:40px!important}
+  html[data-lateral-fija] .sidebar .nav-label span,
+  html[data-lateral-fija] .sidebar .lateral-boton{display:none}
+  /* El encabezado de cada pantalla ya no necesita el logo: está al lado. */
+  html[data-lateral-fija] body :is(header.top,body>header) img[src^="/logo"]{display:none}
+}
+
+/* Con la barra al lado, el logo del encabezado queda repetido. */
+html[data-lateral-fija] body :is(header.top,body>header) img[src^="/logo"]{display:none}
+
 /* ---------- Encabezados propios (tableros de flota, portada) ---------- */
 body :is(.topbar){background:var(--surface-1,var(--panel));color:var(--ink);border-color:var(--hairline,var(--line))}
 body .topbar .context b{color:var(--ink)}
