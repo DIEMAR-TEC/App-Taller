@@ -27,7 +27,7 @@ Configuración, toda por variables de entorno:
 
 Local: python3 app.py
 """
-import datetime, json, os, sys, threading, traceback
+import datetime, json, os, re, sys, threading, traceback
 from http.server import ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs, unquote
 
@@ -57,6 +57,7 @@ import marcas as mcs
 import stock_minimo as stm
 import parametros as par
 import permisos
+import lateral as lat
 import solicitudes as sol
 import mantenimiento as mant
 import preferencias as prefs
@@ -285,9 +286,10 @@ class App(CupoPorPedido, gom.Handler):
             barra = '' if 'src="/barra.js"' in html else '<script defer src="/barra.js"></script>'
             # La lista de módulos a la izquierda, en todas las pantallas:
             # saltar de Gomería a Repuestos era volver al inicio y entrar de
-            # nuevo. Va sin defer, como tema.js, porque marca el <html>
-            # antes de que se pinte: si esperara, el contenido aparecería
-            # pegado al borde y pegaría un salto al correrse.
+            # nuevo. El script solo abre y cierra la barra; el marcado lo
+            # pone el servidor más abajo. Va sin defer, como tema.js, porque
+            # marca el <html> antes de que se pinte: si esperara, el
+            # contenido aparecería pegado al borde y pegaría un salto.
             lateral = '' if 'src="/lateral.js"' in html else '<script src="/lateral.js"></script>'
             estilos = tema + barra + lateral + '<link rel="stylesheet" href="/sistema.css">'
             # El logo de la empresa en la solapa del navegador. Va acá y no
@@ -297,6 +299,17 @@ class App(CupoPorPedido, gom.Handler):
             if 'rel="icon"' not in html:
                 estilos += '<link rel="icon" href="/favicon.png" type="image/png">'
             html = html.replace('</head>', estilos + '</head>', 1) if '</head>' in html else html + estilos
+            # La barra de módulos, ya armada, apenas abre el <body>. Va en el
+            # HTML y no la dibuja un script para que al cambiar de módulo no
+            # haya un instante sin barra: se pinta junto con el resto de la
+            # pantalla. Y como acá ya se sabe quién entró, los módulos que el
+            # rol no abre directamente no se escriben.
+            cabeza = re.search(r"<body[^>]*>", html)
+            if (cabeza and lat.corresponde(self._ruta_pedida())
+                    and 'class="sidebar lateral"' not in html):
+                html = (html[:cabeza.end()]
+                        + lat.barra(self.usuario, self._ruta_pedida())
+                        + html[cabeza.end():])
             # El asistente (Titán) vive en la portada. Inyectarlo en todas las pantallas
             # lo dejaba encima de formularios, tablas y botones de trabajo.
             script = ('<script src="/pengui.js"></script>'

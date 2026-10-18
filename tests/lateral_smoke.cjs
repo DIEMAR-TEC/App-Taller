@@ -10,7 +10,18 @@ const fs = require('fs'), path = require('path'), assert = require('assert');
 const dir = path.resolve(__dirname, '..');
 
 const YO = {nombre: 'Nicolás', usuario: 'nico', rol: 'admin', rol_nombre: 'Administrador',
-            administra: false, modulos: ['vencimientos', 'gomeria', 'repuestos', 'unidades']};
+            administra: false, modulos: ['vencimientos', 'gomeria', 'repuestos', 'unidades', 'ordenes']};
+
+// El marcado sale de gomeria/lateral.py, que es quien lo arma de verdad.
+// Pedírselo a Python en vez de copiarlo evita que la prueba valide una
+// barra que el servidor ya no manda.
+const {execFileSync} = require('child_process');
+function barraDelServidor(ruta) {
+  return execFileSync('python3', ['-c',
+    'import sys;sys.path.insert(0,"gomeria");import json,lateral;' +
+    'print(lateral.barra(json.loads(sys.argv[1]), sys.argv[2]))',
+    JSON.stringify(YO), ruta], {cwd: dir, encoding: 'utf8'}).trim();
+}
 
 (async () => {
   const browser = await chromium.launch({headless: true,
@@ -29,12 +40,15 @@ const YO = {nombre: 'Nicolás', usuario: 'nico', rol: 'admin', rol_nombre: 'Admi
       if (url.pathname === '/api/yo') return route.fulfill({json: YO});
       if (url.pathname.startsWith('/api/'))
         return route.fulfill({json: {}});
-      if (pantallas[url.pathname])
-        return route.fulfill({
-          body: fs.readFileSync(path.join(dir, pantallas[url.pathname]), 'utf8')
-                  .replace('</head>', '<script src="/lateral.js"></script>' +
-                                      '<link rel="stylesheet" href="/sistema.css"></head>'),
-          contentType: 'text/html'});
+      if (pantallas[url.pathname]) {
+        let cuerpo = fs.readFileSync(path.join(dir, pantallas[url.pathname]), 'utf8')
+          .replace('</head>', '<script src="/lateral.js"></script>' +
+                              '<link rel="stylesheet" href="/sistema.css"></head>');
+        // Igual que app.py: la barra la arma el servidor y entra en el HTML.
+        if (url.pathname !== '/')
+          cuerpo = cuerpo.replace(/<body[^>]*>/, m => m + barraDelServidor(url.pathname));
+        return route.fulfill({body: cuerpo, contentType: 'text/html'});
+      }
       if (url.pathname === '/logo.png')
         return route.fulfill({body: fs.readFileSync(path.join(dir, 'titan-flota-logo.png')),
                               contentType: 'image/png'});
@@ -74,9 +88,8 @@ const YO = {nombre: 'Nicolás', usuario: 'nico', rol: 'admin', rol_nombre: 'Admi
     // ---------------------------------------------------------------
     // Los módulos que el rol no tiene no se listan.
     // ---------------------------------------------------------------
-    await page.locator('aside.lateral a[href="/combustible"][hidden]').waitFor({state: 'hidden'});
-    assert(await page.locator('aside.lateral a[href="/combustible"]').isHidden(),
-           'se listó un módulo que el rol no tiene');
+    assert.equal(await page.locator('aside.lateral a[href="/combustible"]').count(), 0,
+                 'se escribió un módulo que el rol no tiene');
     assert(await page.locator('aside.lateral a[href="/vencimientos"]').isVisible(),
            'se escondió un módulo que el rol sí tiene');
     // Inicio no cuelga de ningún permiso: es la portada de todos.
@@ -157,6 +170,24 @@ const YO = {nombre: 'Nicolás', usuario: 'nico', rol: 'admin', rol_nombre: 'Admi
     const despues = (await page.locator('aside.sidebar').boundingBox()).width;
     assert(despues < antes - 100,
            `en la portada la barra no encogió (${antes} -> ${despues})`);
+
+    // ---------------------------------------------------------------
+    // En pantalla angosta la portada arma su barra como una tira
+    // horizontal arriba (su propia media query). Encogerle la grilla ahí
+    // dejaba los íconos apretados en una franja vertical al lado del
+    // contenido, encima del panel de Titán.
+    // ---------------------------------------------------------------
+    await page.setViewportSize({width: 760, height: 1100});
+    await page.reload();
+    await page.locator('.lateral-boton').waitFor();
+    assert.equal(await estado(), 'chica', 'se perdió el estado al recargar');
+    const columnas = await page.evaluate(
+      () => getComputedStyle(document.querySelector('.shell')).gridTemplateColumns);
+    assert(!/^\d+(\.\d+)?px \d/.test(columnas),
+           `angosta, la portada quedó en dos columnas: ${columnas}`);
+    assert.equal(await page.evaluate(
+      () => getComputedStyle(document.querySelector('.sidebar')).flexDirection), 'row',
+      'angosta, la barra de la portada dejó de ser una tira horizontal');
 
     assert.deepEqual(errores, [], 'la pantalla tiró errores de JavaScript');
     console.log('lateral_smoke: bien');

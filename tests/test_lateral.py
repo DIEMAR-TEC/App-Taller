@@ -1,13 +1,11 @@
-"""La barra lateral que lateral.js pone en todas las pantallas.
+"""La barra de módulos que el servidor pone a la izquierda de cada pantalla.
 
-Hasta acá la lista de módulos vivía solo en la portada: para ir de
-Gomería a Repuestos había que volver al inicio y entrar de nuevo. Ahora
-está en todas, y eso trae un riesgo nuevo: dos listas, una en inicio.html
-y otra en lateral.js, que se separan en silencio. El día que se agregue un
-módulo y se lo cargue en un solo lado, nadie se entera hasta que alguien
-lo busca y no está. Por eso la prueba grande de acá compara las dos.
+La arma gomeria/lateral.py y entra en el HTML. Eso trae un riesgo nuevo:
+dos listas, una en inicio.html —que tiene la suya adentro de su grilla— y
+otra en lateral.py, que se separan en silencio. El día que se agregue un
+módulo y se lo cargue en un solo lado, nadie se entera hasta que alguien lo
+busca y no está. Por eso la prueba grande de acá compara las dos.
 """
-import json
 import re
 import sys
 import unittest
@@ -16,33 +14,22 @@ from unittest.mock import patch
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
+sys.path.insert(0, str(RAIZ / "gomeria"))
 import app
+import lateral
 
 
 def _nav_de_la_portada():
     """Los módulos como los escribe inicio.html, en orden."""
     html = (RAIZ / "inicio.html").read_text()
     nav = re.search(r'<nav class="nav".*?</nav>', html, re.S).group(0)
-    salida = []
-    for a in re.finditer(r"<a\b([^>]*)>(.*?)</a>", nav, re.S):
-        atributos, adentro = a.group(1), a.group(2)
-        salida.append((
-            re.search(r'href="([^"]+)"', atributos).group(1),
-            re.search(r"<span>(.*?)</span>", adentro, re.S).group(1),
-        ))
-    return salida
+    return [(re.search(r'href="([^"]+)"', a.group(1)).group(1),
+             re.search(r"<span>(.*?)</span>", a.group(2), re.S).group(1))
+            for a in re.finditer(r"<a\b([^>]*)>(.*?)</a>", nav, re.S)]
 
 
-def _modulos_de_la_barra():
-    """Los módulos como los declara lateral.js, en orden."""
-    js = (RAIZ / "lateral.js").read_text()
-    bloque = re.search(r"var MODULOS = \[(.*?)\n  \];", js, re.S).group(1)
-    return [(json.loads(m.group(1)), json.loads(m.group(2)))
-            for m in re.finditer(r'href:\s*("(?:[^"\\]|\\.)*").*?texto:\s*("(?:[^"\\]|\\.)*")',
-                                 bloque, re.S)]
-
-
-def _pantalla(ruta, html=b"<html><head></head><body></body></html>", usuario={"id": 1}):
+def _pantalla(ruta, html=b"<html><head></head><body></body></html>",
+              usuario={"id": 1, "administra": True}):
     """Lo que sale al servir esa pantalla, con el agregado del servidor."""
     manejador = object.__new__(app.App)
     manejador.usuario = usuario
@@ -56,58 +43,92 @@ class LaListaDeModulos(unittest.TestCase):
     """Una sola lista, aunque esté escrita en dos archivos."""
 
     def test_la_barra_y_la_portada_listan_lo_mismo_y_en_el_mismo_orden(self):
-        portada, barra = _nav_de_la_portada(), _modulos_de_la_barra()
-        self.assertEqual(barra, portada,
-                         "inicio.html y lateral.js se separaron: el módulo que "
+        barra = [(m["href"], m["texto"]) for m in lateral.MODULOS]
+        self.assertEqual(barra, _nav_de_la_portada(),
+                         "inicio.html y lateral.py se separaron: el módulo que "
                          "falta de un lado no se ve desde esa pantalla.")
 
     def test_hay_modulos_de_verdad(self):
         """Si los dos lados quedaran vacíos, la comparación de arriba pasaría
         sin mirar nada."""
-        self.assertGreaterEqual(len(_modulos_de_la_barra()), 8)
+        self.assertGreaterEqual(len(lateral.MODULOS), 8)
 
     def test_cada_modulo_apunta_a_una_direccion_que_el_servidor_sirve(self):
         """Un enlace a una pantalla que no existe es un 404 con el nombre del
         módulo arriba."""
         servidas = set(app.PANTALLAS) | {"/gomeria"}
-        for href, texto in _modulos_de_la_barra():
-            with self.subTest(modulo=texto):
-                self.assertIn(href, servidas)
+        for m in lateral.MODULOS + [lateral.AJUSTES]:
+            with self.subTest(modulo=m["texto"]):
+                self.assertIn(m["href"], servidas)
 
 
-class ComoLlegaALaPantalla(unittest.TestCase):
-    def test_se_inyecta_en_las_pantallas_de_trabajo(self):
-        self.assertIn("/lateral.js", _pantalla("/ordenes"))
-        self.assertIn("/lateral.js", _pantalla("/"))
+class QueVeCadaRol(unittest.TestCase):
+    """El marcado lo arma el servidor, que ya sabe quién entró: el módulo que
+    el rol no abre no se escribe. Antes salían todos y un script los
+    escondía después."""
 
-    def test_va_sin_defer_para_que_el_contenido_no_pegue_un_salto(self):
-        """Marca el <html> antes de que se pinte: con defer, la pantalla
-        aparecía pegada al borde y se corría al armarse la barra."""
-        self.assertIn('<script src="/lateral.js"></script>', _pantalla("/unidades"))
+    def test_el_que_administra_los_ve_todos(self):
+        html = lateral.barra({"administra": True}, "/ordenes")
+        for m in lateral.MODULOS:
+            self.assertIn(f'href="{m["href"]}"', html)
 
-    def test_la_pantalla_que_ya_lo_declara_no_recibe_otro(self):
-        propio = ('<html><head><script src="/lateral.js"></script></head>'
-                  '<body></body></html>')
-        self.assertEqual(_pantalla("/alertas", propio.encode()).count("/lateral.js"), 1)
+    def test_un_rol_acotado_solo_ve_los_suyos(self):
+        html = lateral.barra({"modulos": ["vencimientos"]}, "/vencimientos")
+        self.assertIn('href="/vencimientos"', html)
+        self.assertNotIn('href="/combustible"', html)
+
+    def test_el_inicio_no_cuelga_de_ningun_permiso(self):
+        """Es la portada de todos; sin esto un rol acotado se quedaba sin
+        forma de volver."""
+        self.assertIn('href="/"', lateral.barra({"modulos": []}, "/ordenes"))
+
+    def test_marca_el_modulo_en_el_que_uno_esta(self):
+        html = lateral.barra({"administra": True}, "/ordenes")
+        self.assertIn('href="/ordenes" aria-current="page"', html)
+        self.assertEqual(html.count('aria-current="page"'), 1)
+
+    def test_configuracion_tambien_se_marca(self):
+        html = lateral.barra({"administra": True}, "/configuracion")
+        self.assertIn('aria-current="page"', html)
+
+
+class DondeVa(unittest.TestCase):
+    def test_entra_en_el_html_de_las_pantallas_de_trabajo(self):
+        salida = _pantalla("/ordenes")
+        self.assertIn('class="sidebar lateral"', salida)
+        self.assertIn("/lateral.js", salida)
+
+    def test_va_apenas_abre_el_body(self):
+        """Más abajo quedaría después del contenido y, sin JavaScript, se
+        vería al pie de la pantalla."""
+        salida = _pantalla("/unidades")
+        self.assertRegex(salida, r"<body[^>]*><aside class=\"sidebar lateral\"")
+
+    def test_la_portada_no_la_recibe_porque_ya_tiene_la_suya(self):
+        salida = _pantalla("/")
+        self.assertNotIn('class="sidebar lateral"', salida)
+        self.assertIn("/lateral.js", salida)      # el botón sí va
+
+    def test_las_pantallas_del_telefono_quedan_afuera(self):
+        """El QR de la goma se escanea parado al lado de la unidad: ahí el
+        ancho es todo."""
+        for ruta in ("/movil", "/u/AD247MQ"):
+            with self.subTest(ruta=ruta):
+                self.assertFalse(lateral.corresponde(ruta))
+                self.assertNotIn('class="sidebar lateral"', _pantalla(ruta))
+
+    def test_la_pantalla_que_ya_la_trae_no_recibe_otra(self):
+        propio = '<html><head></head><body><aside class="sidebar lateral"></aside></body></html>'
+        self.assertEqual(
+            _pantalla("/alertas", propio.encode()).count('class="sidebar lateral"'), 1)
 
     def test_sin_sesion_no_se_toca_nada(self):
         """El login no lleva barra: todavía no se sabe quién es."""
         self.assertEqual(_pantalla("/login", "login", usuario=None), "login")
 
-    def test_el_archivo_se_sirve(self):
+    def test_el_script_se_sirve(self):
         self.assertEqual(app.PANTALLAS["/lateral.js"][0], "lateral.js")
         self.assertTrue((RAIZ / "lateral.js").exists())
-
-
-class LasPantallasDelTelefono(unittest.TestCase):
-    """El QR de la goma se escanea parado al lado de la unidad: ahí el ancho
-    es todo y la barra no va."""
-
-    def test_estan_declaradas_como_excepcion(self):
-        js = (RAIZ / "lateral.js").read_text()
-        afuera = re.search(r"var SIN_BARRA = \[(.*?)\];", js, re.S).group(1)
-        self.assertIn("/movil", afuera)
-        self.assertIn("/u/", afuera)
 
 
 class ElZIndex(unittest.TestCase):
@@ -132,6 +153,21 @@ class ElZIndex(unittest.TestCase):
         self.assertLess(suyo, min(velos),
                         "la barra tapa un modal: un diálogo abierto dejaría "
                         "la navegación encima.")
+
+
+class LaPortadaAngosta(unittest.TestCase):
+    """Abajo de 980px la portada arma su barra como una tira horizontal
+    arriba. Encogerle la grilla ahí dejaba los íconos apretados en una franja
+    vertical al lado del contenido, encima del panel de Titán."""
+
+    def test_la_grilla_encogida_es_solo_para_pantalla_ancha(self):
+        css = (RAIZ / "sistema.css").read_text()
+        regla = re.search(r"operations-home \.shell\{grid-template-columns", css)
+        self.assertIsNotNone(regla)
+        antes = css[:regla.start()]
+        media = antes.rfind("@media")
+        self.assertNotEqual(media, -1, "la regla quedó fuera de toda media query")
+        self.assertIn("min-width:981px", css[media:regla.start()])
 
 
 if __name__ == "__main__":

@@ -119,12 +119,6 @@ aside.lateral .brand{display:flex;align-items:center;gap:11px;
 aside.lateral .nav-label{margin:20px 7px 10px;font-size:10px;font-weight:700;
   letter-spacing:1.8px;text-transform:uppercase}
 aside.lateral .nav{display:grid;gap:5px}
-/* Un módulo que el rol no tiene se esconde poniéndole [hidden] (lo hace
-   lateral.js con lo que contesta /api/yo). Sin esto no alcanza: el
-   display:flex de abajo le gana a la regla del navegador y el enlace se
-   seguía viendo. La portada lo resuelve con la misma regla en su propio
-   archivo; estas pantallas no la tienen. */
-aside.lateral .nav a[hidden]{display:none!important}
 aside.lateral .nav a{display:flex;align-items:center;gap:12px;padding:11px 10px;
   text-decoration:none;font-weight:500;font-size:13.5px;white-space:nowrap;
   transition:.18s background,.18s color}
@@ -149,8 +143,14 @@ html[data-lateral="chica"] .sidebar .brand img{max-width:40px!important}
 html[data-lateral="chica"] .sidebar .nav-label{justify-content:center}
 html[data-lateral="chica"] .sidebar .nav-label span{display:none}
 
-/* La portada no tiene barra fija: encoge su columna de la grilla. */
-html[data-lateral="chica"] body.operations-home .shell{grid-template-columns:var(--tf-lateral-chica) minmax(0,1fr)}
+/* La portada no tiene barra fija: encoge su columna de la grilla.
+   Solo en pantalla ancha. Abajo de 980px la portada arma su barra como una
+   tira horizontal arriba (su propia media query), y forzarle dos columnas
+   dejaba los iconos apretados en una franja vertical de 66px al lado del
+   contenido. El corte es el mismo que usa inicio.html. */
+@media(min-width:981px){
+  html[data-lateral="chica"] body.operations-home .shell{grid-template-columns:var(--tf-lateral-chica) minmax(0,1fr)}
+}
 
 /* El botón de ocultar, en la fila del rótulo «Módulos». */
 body .sidebar .nav-label{display:flex;align-items:center;justify-content:space-between;gap:8px}
