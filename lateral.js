@@ -26,6 +26,10 @@
   function donde() { return location.pathname.replace(/\/+$/, '') || '/'; }
 
   function corresponde() {
+    /* La portada mete a Titán adentro de un iframe (/asistente?embed=1).
+       Ahí no va barra —ya se ve la de afuera— y tampoco hay que correrle
+       el cuerpo: el iframe mide lo que mide la tarjeta. */
+    if (location.search.indexOf('embed=1') !== -1) return false;
     var p = donde();
     for (var i = 0; i < SIN_BARRA.length; i++)
       if (p === SIN_BARRA[i] || p.indexOf(SIN_BARRA[i]) === 0) return false;
@@ -88,9 +92,63 @@
     });
   }
 
+  /* ------------------------------------------------------------------
+     EL CAJÓN DEL TELÉFONO
+     ------------------------------------------------------------------
+     En una pantalla angosta la barra no se queda al costado comiéndose el
+     ancho: se abre encima con las tres barras del encabezado y se va al
+     tocar afuera, como cualquier aplicación del teléfono. Quién manda
+     —barra al costado o cajón— lo decide sistema.css por el ancho; acá
+     solo se abre y se cierra. */
+  var velo = null;
+
+  function cerrarCajon() {
+    delete raiz.dataset.cajon;
+    if (velo) { velo.remove(); velo = null; }
+  }
+
+  function abrirCajon() {
+    if (raiz.dataset.cajon) return cerrarCajon();
+    raiz.dataset.cajon = 'si';
+    velo = document.createElement('button');
+    velo.type = 'button';
+    velo.className = 'lateral-velo';
+    velo.setAttribute('aria-label', 'Cerrar el menú');
+    velo.addEventListener('click', cerrarCajon);
+    document.body.appendChild(velo);
+  }
+
+  function abridor() {
+    /* Las pantallas de trabajo tienen header.top; la portada, .topbar. */
+    var cab = document.querySelector('header.top') ||
+              document.querySelector('header.topbar');
+    if (!cab || cab.querySelector('.lateral-abrir')) return;
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'lateral-abrir';
+    b.title = 'Módulos';
+    b.setAttribute('aria-label', 'Abrir el menú de módulos');
+    b.innerHTML = TRES_BARRAS;
+    b.addEventListener('click', abrirCajon);
+    cab.insertBefore(b, cab.firstChild);
+  }
+
   function arrancar() {
     var caja = document.querySelector('aside.sidebar');
-    if (caja) boton(caja);
+    if (!caja) return;
+    boton(caja);
+    abridor();
+    /* Al elegir un módulo la pantalla cambia igual, pero si es la misma
+       el cajón quedaría abierto tapándola. */
+    caja.addEventListener('click', function (ev) {
+      if (ev.target.closest('a')) cerrarCajon();
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') cerrarCajon();
+    });
+    /* Al girar el teléfono o agrandar la ventana manda la barra al
+       costado: un velo colgado ahí taparía la pantalla entera. */
+    addEventListener('resize', cerrarCajon);
   }
 
   if (document.readyState === 'loading')

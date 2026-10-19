@@ -49,7 +49,17 @@ AJUSTES = {"href": "/configuracion", "texto": "Configuración",
      "icono": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z\"/></svg>"}
 
 
-def corresponde(ruta):
+def corresponde(ruta, consulta=""):
+    """Si esa pantalla lleva barra.
+
+    'consulta' es lo que va después del signo de pregunta. Hace falta por
+    las pantallas embebidas: la portada mete a Titán adentro de un iframe
+    (/asistente?embed=1) y ahí la barra salía dibujada en miniatura dentro
+    de la tarjeta, como una barra adentro de otra. Una pantalla embebida es
+    un pedazo de otra, no una pantalla: no se navega desde ella.
+    """
+    if "embed=1" in (consulta or ""):
+        return False
     ruta = (ruta or "/").split("?")[0].rstrip("/") or "/"
     if ruta in SIN_BARRA:
         return False

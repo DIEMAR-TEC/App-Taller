@@ -172,22 +172,79 @@ function barraDelServidor(ruta) {
            `en la portada la barra no encogió (${antes} -> ${despues})`);
 
     // ---------------------------------------------------------------
-    // En pantalla angosta la portada arma su barra como una tira
-    // horizontal arriba (su propia media query). Encogerle la grilla ahí
-    // dejaba los íconos apretados en una franja vertical al lado del
+    // Angosta, la portada no queda en dos columnas: la barra sale del
+    // flujo y pasa a ser el cajón. Antes se le forzaban dos columnas y
+    // los íconos quedaban apretados en una franja vertical al lado del
     // contenido, encima del panel de Titán.
     // ---------------------------------------------------------------
     await page.setViewportSize({width: 760, height: 1100});
     await page.reload();
-    await page.locator('.lateral-boton').waitFor();
-    assert.equal(await estado(), 'chica', 'se perdió el estado al recargar');
+    await page.locator('.lateral-abrir').waitFor();
     const columnas = await page.evaluate(
       () => getComputedStyle(document.querySelector('.shell')).gridTemplateColumns);
     assert(!/^\d+(\.\d+)?px \d/.test(columnas),
            `angosta, la portada quedó en dos columnas: ${columnas}`);
-    assert.equal(await page.evaluate(
-      () => getComputedStyle(document.querySelector('.sidebar')).flexDirection), 'row',
-      'angosta, la barra de la portada dejó de ser una tira horizontal');
+
+    // ---------------------------------------------------------------
+    // EL TELÉFONO
+    // ---------------------------------------------------------------
+    // Una barra fija se come 66 de 390 píxeles y no se puede cerrar: eso
+    // no es una barra de celular, es un recorte permanente. Acá tiene que
+    // ser un cajón que se abre encima y se va al tocar afuera.
+    await page.setViewportSize({width: 390, height: 844});
+    for (const ruta of ['/ordenes', '/']) {
+      await page.goto('http://taller.test' + ruta);
+      await page.locator('.lateral-abrir').waitFor();
+
+      assert.equal(Math.round(await margen()), 0,
+                   `${ruta}: en el teléfono la barra le come el ancho a la pantalla`);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth),
+                   390, `${ruta}: la pantalla se va de ancho en el teléfono`);
+
+      // Cerrada, el cajón no está a la vista ni se puede tabular hasta él.
+      assert.equal(await page.evaluate(
+        () => getComputedStyle(document.querySelector('aside.sidebar')).visibility),
+        'hidden', `${ruta}: el cajón quedó alcanzable con la barra cerrada`);
+
+      // El botón tiene que verse: fijarle el blanco lo hacía desaparecer
+      // en la portada, que tiene el encabezado claro.
+      const contraste = await page.evaluate(() => {
+        const b = document.querySelector('.lateral-abrir');
+        const luz = c => {
+          const [r, g, v] = c.match(/\d+/g).map(Number);
+          return (0.299 * r + 0.587 * g + 0.114 * v) / 255;
+        };
+        let fondo = b, color = getComputedStyle(b).backgroundColor;
+        while (fondo && /rgba\(0, 0, 0, 0\)|transparent/.test(color)) {
+          fondo = fondo.parentElement;
+          color = fondo ? getComputedStyle(fondo).backgroundColor : 'rgb(255,255,255)';
+        }
+        return Math.abs(luz(getComputedStyle(b).color) - luz(color));
+      });
+      assert(contraste > 0.25,
+             `${ruta}: el botón de las tres barras no se distingue del encabezado`);
+
+      // Se abre encima, sin correr la pantalla.
+      await page.click('.lateral-abrir');
+      await page.waitForTimeout(350);
+      const cajon = await page.locator('aside.sidebar').boundingBox();
+      assert.equal(Math.round(cajon.x), 0, `${ruta}: el cajón no llegó al borde`);
+      assert(cajon.width >= 240, `${ruta}: el cajón quedó angosto (${cajon.width})`);
+      assert.equal(Math.round(await margen()), 0,
+                   `${ruta}: abrir el cajón corrió la pantalla en vez de taparla`);
+      assert.equal(await page.locator('.lateral-velo').count(), 1,
+                   `${ruta}: falta el velo que apaga lo de atrás`);
+      // Adentro del cajón se leen los nombres: un ícono solo obliga a adivinar.
+      assert(await page.evaluate(() => document.querySelector(
+               'aside.sidebar .nav a[href="/repuestos"] span').getBoundingClientRect().width) > 20,
+             `${ruta}: el cajón muestra íconos sin nombre`);
+
+      // Y se va al tocar afuera, como cualquier aplicación del teléfono.
+      await page.mouse.click(370, 700);
+      await page.waitForTimeout(350);
+      assert(!await page.evaluate(() => document.documentElement.dataset.cajon),
+             `${ruta}: el cajón no se cerró al tocar afuera`);
+    }
 
     assert.deepEqual(errores, [], 'la pantalla tiró errores de JavaScript');
     console.log('lateral_smoke: bien');

@@ -305,8 +305,9 @@ class App(CupoPorPedido, gom.Handler):
             # pantalla. Y como acá ya se sabe quién entró, los módulos que el
             # rol no abre directamente no se escriben.
             cabeza = re.search(r"<body[^>]*>", html)
-            if (cabeza and lat.corresponde(self._ruta_pedida())
-                    and 'class="sidebar lateral"' not in html):
+            if (cabeza and 'class="sidebar lateral"' not in html
+                    and lat.corresponde(self._ruta_pedida(),
+                                        urlparse(self.path).query)):
                 html = (html[:cabeza.end()]
                         + lat.barra(self.usuario, self._ruta_pedida())
                         + html[cabeza.end():])

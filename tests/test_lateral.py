@@ -117,6 +117,18 @@ class DondeVa(unittest.TestCase):
                 self.assertFalse(lateral.corresponde(ruta))
                 self.assertNotIn('class="sidebar lateral"', _pantalla(ruta))
 
+    def test_la_pantalla_embebida_no_la_lleva(self):
+        """La portada mete a Titán adentro de un iframe (/asistente?embed=1).
+        Con barra ahí, la tarjeta de Titán mostraba una barra en miniatura
+        adentro: una barra adentro de otra. Una pantalla embebida es un
+        pedazo de otra, no una pantalla: no se navega desde ella."""
+        self.assertFalse(lateral.corresponde("/asistente", "embed=1"))
+        self.assertNotIn('class="sidebar lateral"', _pantalla("/asistente?embed=1"))
+
+    def test_pero_a_pantalla_completa_si(self):
+        self.assertTrue(lateral.corresponde("/asistente", ""))
+        self.assertIn('class="sidebar lateral"', _pantalla("/asistente"))
+
     def test_la_pantalla_que_ya_la_trae_no_recibe_otra(self):
         propio = '<html><head></head><body><aside class="sidebar lateral"></aside></body></html>'
         self.assertEqual(
