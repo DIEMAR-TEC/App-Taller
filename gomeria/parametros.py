@@ -28,6 +28,7 @@ from xml.etree import ElementTree
 import alertas
 import mantenimiento
 import permisos
+import satelitales
 
 ORIGENES = ("automatico", "manual")
 # El prefiltro es un preventivo más, con su propio plan: una unidad que lo
@@ -380,9 +381,9 @@ def panel(cx, usuario=None):
         "reglas": alertas.reglas(cx),
         # Cuántas lecturas del satelital entraron ayer: es lo que dice si
         # el automático está andando de verdad o quedó colgado.
-        "lecturas": _uno(cx, """
+        "lecturas": _uno(cx, f"""
             select count(*)::int as ayer, max(fecha) as ultima
-            from odometros where fuente = 'hawk'
+            from odometros where fuente in {satelitales.en_sql()}
               and fecha >= current_date - 1"""),
         "puede_gestionar": permisos.gestiona(usuario),
         "puede_administrar": permisos.administra(usuario),

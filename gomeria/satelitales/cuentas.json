@@ -1,0 +1,9 @@
+[
+  {
+    "empresa": "Flota propia",
+    "proveedor": "hawk_api",
+    "respaldo": ["hawk_web"],
+    "credenciales": {"usuario": "HAWK_USER", "clave": "HAWK_PASS"},
+    "opciones": {}
+  }
+]

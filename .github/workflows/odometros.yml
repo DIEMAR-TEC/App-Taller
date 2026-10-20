@@ -1,8 +1,12 @@
 name: Odometros a Supabase
 
-# Lee el odómetro de cada móvil directo del satelital Hawk y lo guarda en la
-# tabla odometros de Supabase. Antes esto se bajaba del repo ServiceDM, que
-# corre de lunes a viernes: el fin de semana la serie quedaba con agujeros.
+# Lee el odómetro de cada móvil del satelital de cada empresa y lo guarda en
+# la tabla odometros de Supabase. Las cuentas están en
+# gomeria/satelitales/cuentas.json; Hawk se lee por su API (getUnits) y, si
+# la API no contesta, por la página con Chrome como antes.
+#
+# Antes esto se bajaba del repo ServiceDM, que corre de lunes a viernes: el
+# fin de semana la serie quedaba con agujeros.
 # Ahora la app entra sola y corre los siete días, sábados y domingos incluidos.
 #
 # Sale a las 05:00 ART, tres horas antes que el scraper de ServiceDM, que
@@ -20,10 +24,18 @@ on:
     - cron: "0 8 * * *"       # 05:00 ART, todos los días
   workflow_dispatch:
     inputs:
+      solo_cuentas:
+        description: "Leer solo estas cuentas de cuentas.json (subcadena, separadas por coma). Vacío = todas."
+        required: false
+        default: ""
       solo_empresas:
         description: "Leer solo estas empresas (subcadena, separadas por coma). Vacío = toda la flota."
         required: false
         default: ""
+      probar:
+        description: "Leer y mostrar sin guardar en la base"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -54,15 +66,19 @@ jobs:
       - name: Limpiar chromedriver del PATH
         run: sudo rm -f "$(command -v chromedriver)" || true
 
-      - name: Leer Hawk y guardar en Supabase
+      # SECRETOS lleva todos los secrets del repo: cada cuenta de
+      # cuentas.json nombra los suyos, así que sumar una empresa no obliga
+      # a tocar este archivo.
+      - name: Leer los satelitales y guardar en Supabase
         env:
-          HAWK_USER: ${{ secrets.HAWK_USER }}
-          HAWK_PASS: ${{ secrets.HAWK_PASS }}
+          SECRETOS: ${{ toJSON(secrets) }}
+          SOLO_CUENTAS: ${{ github.event.inputs.solo_cuentas }}
           SOLO_EMPRESAS: ${{ github.event.inputs.solo_empresas }}
+          PROBAR: ${{ github.event.inputs.probar }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -o pipefail
-          python gomeria/hawk.py 2>&1 | tee salida.txt
+          python gomeria/leer_km.py 2>&1 | tee salida.txt
 
       # El resumen sirve para el mail y para la portada del run. Se arma acá
       # una sola vez, con if:always() para que también exista cuando el paso
@@ -77,7 +93,7 @@ jobs:
           # eso también hay que poder contarlo. El patrón esquiva las vocales
           # acentuadas a propósito: según el locale del runner, un punto
           # matchea un byte y no una letra, y "leídos" se escapaba.
-          resumen=$(grep -E '^(flota|sin lectura|\[supabase\]|nuevas)|con kilometraje' salida.txt 2>/dev/null | tail -n 20)
+          resumen=$(grep -E '^(==|flota|sin lectura|\[supabase\]|\[prueba\]|nuevas|Sin lecturas)|con kilometraje' salida.txt 2>/dev/null | tail -n 20)
           [ -n "$resumen" ] || resumen="(el job se cayó antes de leer nada)"
 
           # El delimitador lleva el id de la corrida para que ninguna línea

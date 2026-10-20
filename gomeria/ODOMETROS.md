@@ -12,16 +12,70 @@ el número del que cuelga todo el módulo de gomería.
 
 | Pieza | Qué hace |
 |---|---|
-| `gomeria/hawk.py` | entra a Hawk, lee el odómetro de cada móvil |
+| `gomeria/leer_km.py` | recorre las cuentas y sube lo que trae cada una |
+| `gomeria/satelitales/cuentas.json` | qué empresa, con qué satelital y qué secrets |
+| `gomeria/satelitales/hawk_api.py` | Hawk por su API, `Api.asmx/getUnits` |
+| `gomeria/satelitales/hawk_web.py` | Hawk por la página con Chrome (`hawk.py`), de respaldo |
 | `gomeria/subir_odometros.py` | deja esas lecturas en la tabla `odometros` |
-| `.github/workflows/odometros.yml` | los corre a los dos, 05:00 ART, todos los días |
+| `.github/workflows/odometros.yml` | corre todo a las 05:00 ART, todos los días |
 | `gomeria/05_odometros.sql` | la tabla y las tres vistas |
 
-Hawk no tiene una API abierta. Hay que loguearse con un navegador de verdad
-—por eso el job instala Chrome— y recién con las cookies de esa sesión se le
-puede pedir la flota al mismo endpoint que usa su propia página. Eso es lo
-que hace `hawk.py`, y es la razón por la que esto corre en GitHub Actions y
-no en el server de la app.
+Hawk se lee por su API con usuario y contraseña: un pedido trae la flota
+entera, sin navegador. Si la API no contesta, la cuenta tiene de respaldo el
+lector viejo, que entra a la página con Chrome. Los dos escriben con fuente
+`hawk`, así que la serie es una sola y la segunda lectura del día pisa a la
+primera.
+
+## Varias empresas, cada una con su satelital
+
+Cada proveedor de GPS tiene su API, pero lo que la app necesita de todos es
+lo mismo: patente, odómetro y cuándo reportó. `satelitales/__init__.py`
+define esa **lectura estándar** y cada proveedor es un módulo que la arma a
+partir de su API. Del módulo para adentro cambia todo; para afuera, nada:
+la tabla, la portada y gomería no saben de qué satelital vino el número.
+
+Una cuenta en `cuentas.json`:
+
+```json
+{
+  "empresa": "Transportes Ejemplo",
+  "proveedor": "hawk_api",
+  "respaldo": ["hawk_web"],
+  "credenciales": {"usuario": "EJEMPLO_HAWK_USER", "clave": "EJEMPLO_HAWK_PASS"},
+  "opciones": {}
+}
+```
+
+`credenciales` lleva el **nombre** de cada secret, nunca el valor. El
+workflow pasa todos los secrets del repo juntos, así que:
+
+- **Otra empresa con un satelital que ya existe:** una entrada en
+  `cuentas.json` y sus dos secrets en GitHub. Nada más.
+- **Un satelital nuevo:** además, un módulo en `satelitales/` con
+  `FUENTE` y `lecturas(credenciales, opciones)`, una línea en
+  `PROVEEDORES` y su fuente en `FUENTES` (lo que la portada y Parámetros
+  cuentan como lectura del satelital).
+
+Una cuenta que falla no frena a las demás; el job termina en error y llega
+el mail diciendo cuál fue. Para dejar una cuenta quieta sin borrarla:
+`"activa": false`.
+
+### Hawk API: si cambia algo
+
+Los nombres de los parámetros de `getUnits` se leen del WSDL del servicio y
+los campos de cada unidad se buscan por nombre (`Patente`, `Kilometraje`,
+`Odometro`, `FechaServer`…). Si Hawk usa otros, la corrida falla con la
+lista de campos que llegaron, y se fijan en `opciones`:
+
+```json
+"opciones": {
+  "parametros": {"usuario": "user", "clave": "pass"},
+  "campos": {"patente": "Plate", "km": "Odometer", "reporte": "LastDate"}
+}
+```
+
+Para mirar qué devuelve sin tocar la base: **Actions** → *Odometros a
+Supabase* → **Run workflow** con *probar* tildado.
 
 **Antes esto llegaba rebotado.** El scraper vivía en el repo ServiceDM,
 dejaba un `historico.csv` commiteado y App-Taller se lo bajaba con curl.
