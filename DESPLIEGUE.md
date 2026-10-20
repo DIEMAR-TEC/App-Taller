@@ -41,7 +41,7 @@ Necesitás tres cosas a mano:
 5. **Create Web Service**. El primer arranque tarda unos minutos.
 
 6. Cuando termine, Render te da una dirección tipo
-   `https://app-taller.onrender.com`. Abrila, entrá con el usuario que pusiste
+   `https://app-taller-cu5d.onrender.com`. Abrila, entrá con el usuario que pusiste
    en `USUARIO_INICIAL` y vas a ver la pantalla de inicio.
 
 7. **Borrá `USUARIO_INICIAL`** de las variables de entorno. Ya cumplió su
@@ -58,7 +58,7 @@ sola. No hay que volver a tocar nada.
 Ahora que la dirección es fija, el QR se genera apuntando a ella:
 
 ```bash
-python3 gomeria/qr.py --base https://app-taller.onrender.com --uno
+python3 gomeria/qr.py --base https://app-taller-cu5d.onrender.com --uno
 ```
 
 Y ese cartel ya no caduca: la dirección no cambia aunque se reinicie el
