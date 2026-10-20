@@ -404,11 +404,11 @@ body .button:hover{color:var(--ink)}
   aspect-ratio:512/628;cursor:default}
 .titan-robot .tr-flota{position:absolute;inset:0;animation:tr-flotar 3.2s ease-in-out infinite}
 .titan-robot img{position:absolute;inset:0;width:100%;height:100%;display:block;margin:0;max-width:none;max-height:none;border-radius:0}
-.titan-robot .tr-brazo{transform-origin:23.9% 48.1%;animation:tr-saludar 6s ease-in-out .4s infinite}
-.titan-robot .tr-ojo{position:absolute;background:#0f2233;border-radius:40%;transform:scaleY(0);
+.titan-robot .tr-brazo{transform-origin:27.8% 48.2%;animation:tr-saludar 6s ease-in-out .4s infinite}
+.titan-robot .tr-ojo{position:absolute;background:#1e2f42;border-radius:40%;transform:scaleY(0);
   animation:tr-parpadear 4.6s linear infinite}
-.titan-robot .tr-ojo.izq{left:40.4%;top:18.7%;width:10.1%;height:8.1%}
-.titan-robot .tr-ojo.der{left:59%;top:15.4%;width:9.7%;height:8.1%}
+.titan-robot .tr-ojo.izq{left:44%;top:18.8%;width:8%;height:6.6%}
+.titan-robot .tr-ojo.der{left:61.8%;top:17.3%;width:7.5%;height:6.6%}
 .titan-robot .tr-sombra{position:absolute;left:18%;right:18%;bottom:-5%;height:5%;border-radius:50%;
   background:rgba(20,36,58,.18);animation:tr-sombra 3.2s ease-in-out infinite}
 .titan-robot.entra{animation:tr-entrar .6s cubic-bezier(.2,1.4,.4,1) both}
@@ -437,10 +437,10 @@ body .button:hover{color:var(--ink)}
 .titan-robot:is(.piensa,.habla) :is(.tr-cuerpo,.tr-brazo,.tr-ojo){opacity:0}
 .titan-robot:is(.piensa,.habla) .tr-brazo{animation:none}
 .titan-robot.piensa .tr-pose-piensa,.titan-robot.habla .tr-pose-habla{opacity:1}
-/* La boca: una tapa del color de la cara sube y baja sobre la boca abierta
+/* La boca: una tapa del color de la cara sube y baja sobre la sonrisa
    del dibujo, así parece que habla. */
-.titan-robot .tr-labio{position:absolute;left:45.1%;top:24.8%;width:10.2%;height:5.5%;border-radius:0 0 45% 45%;
-  background:#10233a;transform-origin:50% 100%;transform:scaleY(0);opacity:0}
+.titan-robot .tr-labio{position:absolute;left:43.5%;top:23.7%;width:8.7%;height:2.6%;border-radius:0 0 45% 45%;
+  background:#1f3040;transform-origin:50% 100%;transform:scaleY(0);opacity:0}
 .titan-robot.habla .tr-labio{opacity:1;animation:tr-hablar .24s ease-in-out infinite alternate}
 .titan-robot.habla .tr-flota{animation:tr-flotar 3.2s ease-in-out infinite,tr-asentir .5s ease-in-out infinite alternate}
 /* Pensando: inclina la cabeza, parpadea más y le salen burbujas de pensamiento. */
