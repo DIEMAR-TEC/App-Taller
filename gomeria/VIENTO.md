@@ -147,4 +147,7 @@ próxima salida** de la misma patente. Sin hora se sigue mirando el día.
 2. Uso comercial: el Open-Meteo gratuito es solo para uso no comercial. Con
    una suscripción (desde USD 29/mes), la clave va en la variable
    `OPEN_METEO_APIKEY` de Render.
-3. Opcional: `VIENTO_HOJAS_URL`, si la planilla cambia de dirección.
+3. El BI pide usuario y contraseña: van en `VIENTO_HOJAS_USUARIO` y
+   `VIENTO_HOJAS_CLAVE`, en Render (Environment) y en GitHub (Settings →
+   Secrets and variables → Actions → Secrets) para la corrida diaria.
+4. Opcional: `VIENTO_HOJAS_URL`, si la planilla cambia de dirección.

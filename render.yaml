@@ -23,6 +23,10 @@ services:
         sync: false
       - key: OPEN_METEO_APIKEY  # Opcional: clave comercial de Open-Meteo (viento en ruta)
         sync: false
+      - key: VIENTO_HOJAS_USUARIO  # Usuario del BI (planilla de viajes)
+        sync: false
+      - key: VIENTO_HOJAS_CLAVE    # Contraseña del BI
+        sync: false
       - key: ANTHROPIC_MODEL    # Opcional: modelo usado por Titán, el asistente
         value: "claude-opus-5"
       - key: USUARIO_INICIAL      # "usuario:Nombre Completo:contraseña". Borrala después.

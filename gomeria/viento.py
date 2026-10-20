@@ -35,6 +35,9 @@ from datetime import date, datetime, timedelta, time as hora_del_dia
 
 URL_HOJAS = (os.environ.get("VIENTO_HOJAS_URL", "").strip()
              or "http://bi.sistemaexpreso.com.ar/reporte_hojas.xlsx")
+# El BI pide usuario y contraseña (autenticación HTTP, Basic o Digest).
+USUARIO_HOJAS = os.environ.get("VIENTO_HOJAS_USUARIO", "").strip()
+CLAVE_HOJAS = os.environ.get("VIENTO_HOJAS_CLAVE", "")
 
 # Con clave, el servidor comercial de Open-Meteo; sin clave, el gratuito,
 # que es solo para uso no comercial.
@@ -409,6 +412,16 @@ _HOJAS_LOCK = threading.Lock()
 MINUTOS_HOJAS = 30
 
 
+def _abridor_hojas():
+    """Con usuario cargado, contesta al pedido de credenciales del BI."""
+    if not USUARIO_HOJAS:
+        return urllib.request.build_opener()
+    claves = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+    claves.add_password(None, URL_HOJAS, USUARIO_HOJAS, CLAVE_HOJAS)
+    return urllib.request.build_opener(urllib.request.HTTPBasicAuthHandler(claves),
+                                       urllib.request.HTTPDigestAuthHandler(claves))
+
+
 def hojas(forzar=False):
     """La planilla del BI, leída. Se guarda media hora en memoria."""
     with _HOJAS_LOCK:
@@ -417,7 +430,7 @@ def hojas(forzar=False):
             return _HOJAS["datos"]
         req = urllib.request.Request(URL_HOJAS, headers={"User-Agent": "app-taller-viento/1.0"})
         try:
-            with urllib.request.urlopen(req, timeout=120) as r:
+            with _abridor_hojas().open(req, timeout=120) as r:
                 contenido = r.read()
         except Exception as e:
             raise RuntimeError(f"No se pudo bajar la planilla de viajes del BI: {e}")
