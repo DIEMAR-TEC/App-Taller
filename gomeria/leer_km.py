@@ -32,17 +32,37 @@ def _con_km(filas):
             if isinstance(f.get("Kilometraje"), (int, float)) and f["Kilometraje"] > 0]
 
 
+def _intentos(cuenta):
+    """El proveedor principal y sus respaldos, cada uno con sus credenciales.
+
+    Un respaldo puede ser solo el nombre (usa las credenciales de la cuenta)
+    o {"proveedor": ..., "credenciales": ...} cuando entra con otro usuario,
+    como Hawk, que tiene un usuario para la API y otro para la página.
+    """
+    respaldo = cuenta.get("respaldo") or []
+    if isinstance(respaldo, (str, dict)):
+        respaldo = [respaldo]
+    salida = [cuenta]
+    for r in respaldo:
+        r = {"proveedor": r} if isinstance(r, str) else r
+        salida.append({"empresa": cuenta["empresa"],
+                       "credenciales": cuenta.get("credenciales"),
+                       "opciones": cuenta.get("opciones"), **r})
+    return salida
+
+
 def leer_cuenta(cuenta):
     """(fuente, lecturas) del primer proveedor de la cuenta que traiga km."""
-    credenciales = sat.credenciales(cuenta)
-    respaldo = cuenta.get("respaldo") or []
-    intentos = [cuenta["proveedor"]] + ([respaldo] if isinstance(respaldo, str) else list(respaldo))
     errores = []
-    for nombre in intentos:
-        modulo = sat.proveedor(nombre)
+    for intento in _intentos(cuenta):
+        nombre = intento["proveedor"]
         print(f"\n== {cuenta['empresa']} · {nombre}")
         try:
-            filas = modulo.lecturas(credenciales, cuenta.get("opciones") or {})
+            # Las credenciales se resuelven por intento: si faltan los
+            # secrets de la API, el respaldo entra igual con los suyos.
+            modulo = sat.proveedor(nombre)
+            credenciales = sat.credenciales(intento)
+            filas = modulo.lecturas(credenciales, intento.get("opciones") or {})
             # Que el satelital conteste sin un solo kilometraje no es un día
             # sin viajes: es la sesión caída o la API cambiada.
             if not _con_km(filas):

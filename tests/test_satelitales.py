@@ -125,6 +125,20 @@ class Cuentas(unittest.TestCase):
              mock.patch("satelitales.hawk_web.lecturas", return_value=lectura):
             self.assertEqual(leer_km.leer_cuenta(self.cuentas[0]), ("hawk", lectura))
 
+    def test_el_respaldo_entra_con_sus_propias_credenciales(self):
+        cuenta = {"empresa": "Uno", "proveedor": "hawk_api",
+                  "credenciales": {"usuario": "API_U", "clave": "API_C"},
+                  "respaldo": [{"proveedor": "hawk_web",
+                                "credenciales": {"usuario": "U1", "clave": "C1"}}]}
+        recibidas = []
+        lectura = [{"Patente": "AE527FA", "Kilometraje": 10.0}]
+        # Sin los secrets de la API todavía cargados: entra la web con los suyos.
+        with mock.patch.dict(os.environ, self.secretos), \
+             mock.patch("satelitales.hawk_web.lecturas",
+                        side_effect=lambda c, o: recibidas.append(c) or lectura):
+            self.assertEqual(leer_km.leer_cuenta(cuenta), ("hawk", lectura))
+        self.assertEqual(recibidas, [{"usuario": "a", "clave": "b"}])
+
     def test_una_cuenta_caida_no_frena_a_la_otra(self):
         subidas = []
         def lecturas(cred, opciones):
@@ -147,7 +161,7 @@ class Cuentas(unittest.TestCase):
         for c in sat.cuentas():
             self.assertIn(c["proveedor"], sat.PROVEEDORES)
             for r in c.get("respaldo") or []:
-                self.assertIn(r, sat.PROVEEDORES)
+                self.assertIn(r["proveedor"] if isinstance(r, dict) else r, sat.PROVEEDORES)
             self.assertTrue(c.get("credenciales"))
 
 

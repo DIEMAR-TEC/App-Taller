@@ -2,8 +2,11 @@
   {
     "empresa": "Flota propia",
     "proveedor": "hawk_api",
-    "respaldo": ["hawk_web"],
-    "credenciales": {"usuario": "HAWK_USER", "clave": "HAWK_PASS"},
+    "credenciales": {"usuario": "HAWK_API_USER", "clave": "HAWK_API_PASS"},
+    "respaldo": [
+      {"proveedor": "hawk_web",
+       "credenciales": {"usuario": "HAWK_USER", "clave": "HAWK_PASS"}}
+    ],
     "opciones": {}
   }
 ]

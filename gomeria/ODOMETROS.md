@@ -40,11 +40,18 @@ Una cuenta en `cuentas.json`:
 {
   "empresa": "Transportes Ejemplo",
   "proveedor": "hawk_api",
-  "respaldo": ["hawk_web"],
-  "credenciales": {"usuario": "EJEMPLO_HAWK_USER", "clave": "EJEMPLO_HAWK_PASS"},
+  "credenciales": {"usuario": "EJEMPLO_HAWK_API_USER", "clave": "EJEMPLO_HAWK_API_PASS"},
+  "respaldo": [
+    {"proveedor": "hawk_web",
+     "credenciales": {"usuario": "EJEMPLO_HAWK_USER", "clave": "EJEMPLO_HAWK_PASS"}}
+  ],
   "opciones": {}
 }
 ```
+
+Hawk tiene un usuario para la API y otro para la página, así que el
+respaldo lleva sus propias credenciales. Si el respaldo usa las mismas que
+la cuenta, alcanza con el nombre: `"respaldo": ["hawk_web"]`.
 
 `credenciales` lleva el **nombre** de cada secret, nunca el valor. El
 workflow pasa todos los secrets del repo juntos, así que:
@@ -94,7 +101,9 @@ En **App-Taller** → Settings → Secrets and variables → Actions:
 
 | Secret | Qué es |
 |---|---|
-| `HAWK_USER` | el usuario del satelital |
+| `HAWK_API_USER` | el usuario de la API de Hawk (`getUnits`) |
+| `HAWK_API_PASS` | su contraseña |
+| `HAWK_USER` | el usuario de la página de Hawk (respaldo con Chrome) |
 | `HAWK_PASS` | su contraseña |
 | `SUPABASE_DB_URL` | la cadena de conexión de Supabase |
 | `EMAIL_FROM` | la casilla de Gmail que manda y recibe el aviso |
