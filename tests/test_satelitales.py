@@ -16,6 +16,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 sys.path.insert(0, str(RAIZ / "gomeria"))
 import leer_km
+import subir_odometros as subir
 import satelitales as sat
 from satelitales import hawk_api
 
@@ -24,6 +25,20 @@ XML_CAMPOS = """<?xml version="1.0" encoding="utf-8"?>
   <Unit><idGPS>29627</idGPS><Patente>AE 527 FA</Patente>
         <Kilometraje>120000,5</Kilometraje><FechaServer>11/09/2026 09:00</FechaServer></Unit>
   <Unit><idGPS>30001</idGPS><Patente>VXO389</Patente><Kilometraje></Kilometraje></Unit>
+</ArrayOfUnit>"""
+
+# Lo que devuelve getUnits de verdad (20/10/2026), recortado a dos unidades.
+GETUNITS = """<?xml version="1.0" encoding="utf-8"?>
+<ArrayOfUnit xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://tempuri.org/">
+  <Unit><GPSDate>2026-10-20T12:25:53</GPSDate><Vehicle>AA472IP_HC</Vehicle>
+    <VehiclePlate>AA472IP_HC</VehiclePlate><Odometer>29358.74609375</Odometer>
+    <Latitude>-34.706623077392578</Latitude><Longitude>-58.49969482421875</Longitude>
+    <Speed>0</Speed><Heading>39</Heading></Unit>
+  <Unit><GPSDate>2026-10-20T12:22:27</GPSDate><Vehicle>AA823XJ QUIÑONES GABRIEL</Vehicle>
+    <VehiclePlate>AA823XJ</VehiclePlate><Odometer>359191.65625</Odometer>
+    <Latitude>-31.359960556030273</Latitude><Longitude>-64.143867492675781</Longitude>
+    <Speed>0</Speed><Heading>0</Heading></Unit>
 </ArrayOfUnit>"""
 
 XML_CON_JSON = """<?xml version="1.0" encoding="utf-8"?>
@@ -57,6 +72,15 @@ class Respuestas(unittest.TestCase):
             self.assertEqual(fila["Kilometraje"], 120000.5)
             self.assertEqual(fila["Ultimo_reporte"], "2026-09-11 09:00:00")
 
+    def test_getunits_real_toma_patente_y_odometro(self):
+        filas = self.leer(GETUNITS)
+        self.assertEqual([(subir._patente(f["Patente"]), f["Kilometraje"]) for f in filas],
+                         [("AA472IP", 29358.74609375), ("AA823XJ", 359191.65625)])
+        self.assertEqual(filas[1]["Ultimo_reporte"], "2026-10-20 12:22:27")
+        # Y así quedan para la tabla: el _HC se va y el km se redondea.
+        (p, _, km, _, _), _ = subir.filas_de(filas)
+        self.assertEqual((p, km), ("AA472IP", 29358.75))
+
     def test_la_unidad_sin_km_viene_vacia_y_no_inventa(self):
         filas = self.leer(XML_CAMPOS)
         self.assertEqual(len(filas), 2)
@@ -80,6 +104,19 @@ class Parametros(unittest.TestCase):
         self.assertEqual((nombres, ns), (["usuario", "contrasena"], "http://hawk/"))
         self.assertEqual(hawk_api._parametros(nombres, {"usuario": "u", "clave": "c"}, {}),
                          {"usuario": "u", "contrasena": "c"})
+
+    def test_sin_parametros_va_por_get_con_usuario_y_clave_en_la_cabecera(self):
+        pedidos = []
+        def pedir(url, datos=None, cabeceras=None):
+            pedidos.append((url, datos, cabeceras))
+            if url.endswith("?WSDL"):
+                raise RuntimeError("HTTP 404")
+            return GETUNITS
+        with mock.patch.object(hawk_api, "_pedir", side_effect=pedir):
+            hawk_api.leer({"usuario": "u", "clave": "c"})
+        url, datos, cabeceras = pedidos[-1]
+        self.assertEqual((url, datos), (hawk_api.URL + "/getUnits", None))
+        self.assertEqual(cabeceras["Authorization"], "Basic dTpj")
 
     def test_sin_wsdl_se_usan_los_de_la_configuracion(self):
         salida = hawk_api._parametros(None, {"usuario": "u", "clave": "c"},

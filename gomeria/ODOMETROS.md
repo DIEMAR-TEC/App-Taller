@@ -69,9 +69,12 @@ el mail diciendo cuál fue. Para dejar una cuenta quieta sin borrarla:
 
 ### Hawk API: si cambia algo
 
-Los nombres de los parámetros de `getUnits` se leen del WSDL del servicio y
-los campos de cada unidad se buscan por nombre (`Patente`, `Kilometraje`,
-`Odometro`, `FechaServer`…). Si Hawk usa otros, la corrida falla con la
+`getUnits` no lleva parámetros: el usuario y la contraseña van como
+autenticación HTTP básica (la ventana que abre el navegador al entrar).
+Devuelve un `<Unit>` por móvil y de cada uno se toman `VehiclePlate`
+(la patente; el `_HC` se saca), `Odometer` (los km) y `GPSDate` (el último
+reporte, en hora argentina). `Vehicle` trae la patente con el chofer y no se
+usa. Si el servicio pidiera parámetros, se leen de su WSDL. Si Hawk usa otros, la corrida falla con la
 lista de campos que llegaron, y se fijan en `opciones`:
 
 ```json

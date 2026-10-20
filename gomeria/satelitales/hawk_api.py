@@ -19,6 +19,7 @@ Opciones de la cuenta (cuentas.json → "opciones"), todas opcionales:
     "parametros": {"usuario": "nombreDelParametro", "clave": "...", "otro": "valor"}
     "campos":    {"patente": "...", "km": "...", "reporte": "...", "id": "..."}
 """
+import base64
 import json
 import re
 import urllib.error
@@ -34,11 +35,13 @@ METODO = "getUnits"
 
 # Los nombres posibles de cada dato, en orden de preferencia. Lo que no
 # coincide exacto se busca por pedazo (la segunda tupla).
-PATENTE = (("Patente", "Dominio", "Plate", "LicensePlate", "Descripcion",
+PATENTE = (("VehiclePlate", "Patente", "Dominio", "Plate", "LicensePlate", "Descripcion",
             "Description", "Alias", "UnitName", "Nombre", "Name"), ("patente", "dominio"))
 KM = (("Kilometraje", "Odometro", "Odometer", "OdometroKm", "Km", "Kms",
        "Mileage", "TotalKm"), ("odom", "kilomet", "mileage"))
-REPORTE = (("FechaServer", "UltimoReporte", "FechaUltimoReporte", "LastReport",
+# getUnits manda GPSDate sin zona y en hora argentina (12:25 de la lectura
+# del 20/10 a las 12:30 ART), así que se guarda tal cual.
+REPORTE = (("GPSDate", "FechaServer", "UltimoReporte", "FechaUltimoReporte", "LastReport",
             "FechaGPS", "GpsDate", "Fecha", "Date", "DateTime", "Timestamp"),
            ("fecha", "date", "report"))
 ID = (("idGPS", "IdGps", "IdMovil", "IdUnidad", "UnitId", "Id", "IMEI"), ())
@@ -57,6 +60,16 @@ def _sin_ns(tag):
 
 # ------------------------------------------------------------------ pedido
 
+def _basica(credenciales):
+    """Usuario y contraseña como autenticación HTTP básica.
+
+    Es lo que pide getUnits: al abrirlo en el navegador aparece la ventana
+    de usuario y contraseña, y la dirección no lleva parámetros.
+    """
+    par = f"{credenciales.get('usuario', '')}:{credenciales.get('clave', '')}"
+    return {"Authorization": "Basic " + base64.b64encode(par.encode("utf-8")).decode()}
+
+
 def _pedir(url, datos=None, cabeceras=None):
     pedido = urllib.request.Request(url, data=datos, headers=cabeceras or {})
     try:
@@ -71,10 +84,13 @@ def _texto_plano(html):
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html)).strip()
 
 
-def _wsdl(url, metodo):
-    """Los parámetros que pide el método y el namespace del servicio."""
+def _wsdl(url, metodo, cabeceras=None):
+    """Los parámetros que pide el método y el namespace del servicio.
+
+    None si no se pudo leer el WSDL; [] si el método no lleva parámetros.
+    """
     try:
-        raiz = ElementTree.fromstring(_pedir(url + "?WSDL"))
+        raiz = ElementTree.fromstring(_pedir(url + "?WSDL", cabeceras=cabeceras))
     except Exception:
         return None, None
     namespace = raiz.get("targetNamespace")
@@ -89,8 +105,10 @@ def _parametros(nombres, credenciales, opciones):
     fijos = dict((opciones or {}).get("parametros") or {})
     p_usuario = fijos.pop("usuario", None)
     p_clave = fijos.pop("clave", None)
-    if not nombres:
-        nombres = [p_usuario or "user", p_clave or "password"] + list(fijos)
+    if nombres is None:
+        # Sin WSDL: solo los que diga la configuración. Por defecto ninguno,
+        # porque el usuario y la contraseña van en la autenticación básica.
+        nombres = [n for n in (p_usuario, p_clave) if n] + list(fijos)
     salida = {}
     for n in nombres:
         if n == p_usuario or (not p_usuario and PARAM_USUARIO.search(n)):
@@ -102,12 +120,15 @@ def _parametros(nombres, credenciales, opciones):
     return salida
 
 
-def _post(url, metodo, parametros):
+def _directo(url, metodo, parametros, cabeceras):
+    """GET si no hay parámetros (como el navegador), si no POST de formulario."""
+    if not parametros:
+        return _pedir(f"{url}/{metodo}", cabeceras=cabeceras)
     return _pedir(f"{url}/{metodo}", urllib.parse.urlencode(parametros).encode(),
-                  {"Content-Type": "application/x-www-form-urlencoded"})
+                  {**cabeceras, "Content-Type": "application/x-www-form-urlencoded"})
 
 
-def _soap(url, metodo, parametros, namespace):
+def _soap(url, metodo, parametros, namespace, cabeceras):
     """El mismo pedido en SOAP 1.1, que es lo único que .asmx deja prendido siempre."""
     namespace = namespace or "http://tempuri.org/"
     campos = "".join(f"<{k}>{_escapar(v)}</{k}>" for k, v in parametros.items())
@@ -117,7 +138,8 @@ def _soap(url, metodo, parametros, namespace):
              '</soap:Envelope>')
     accion = namespace.rstrip("/") + "/" + metodo
     return _pedir(url, sobre.encode("utf-8"),
-                  {"Content-Type": "text/xml; charset=utf-8", "SOAPAction": f'"{accion}"'})
+                  {**cabeceras, "Content-Type": "text/xml; charset=utf-8",
+                   "SOAPAction": f'"{accion}"'})
 
 
 def _escapar(v):
@@ -204,17 +226,18 @@ def _lectura(r, campos, hoy):
 # ------------------------------------------------------------------ lectura
 
 def leer(credenciales, opciones=None):
-    """La respuesta cruda de getUnits: primero por POST, si no por SOAP."""
+    """La respuesta cruda de getUnits: primero directo, si no por SOAP."""
     opciones = opciones or {}
     url = (opciones.get("url") or URL).rstrip("/")
     metodo = opciones.get("metodo") or METODO
-    nombres, namespace = _wsdl(url, metodo)
+    cabeceras = _basica(credenciales)
+    nombres, namespace = _wsdl(url, metodo, cabeceras)
     parametros = _parametros(nombres, credenciales, opciones)
     try:
-        return _post(url, metodo, parametros)
+        return _directo(url, metodo, parametros, cabeceras)
     except Exception as e:
         print(f"Hawk API: el pedido directo no anduvo ({e}); se prueba por SOAP")
-        return _soap(url, metodo, parametros, namespace)
+        return _soap(url, metodo, parametros, namespace, cabeceras)
 
 
 def lecturas(credenciales, opciones=None):
