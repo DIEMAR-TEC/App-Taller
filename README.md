@@ -6,12 +6,12 @@ internos conservan sus nombres anteriores para no romper despliegues ni datos.
 
 ## Identidad visual
 
-- **Logo:** dos versiones con fondo transparente y la «T» en azul brillante.
-  `titan-flota-logo.png`, con letras blancas, para la barra azul noche (se
-  sirve en `/logo.png`); `titan-flota-logo-papel.png`, con letras azul noche,
-  para fondos blancos y papel (`/logo-papel.png` y `/logo-cedula.png`).
-  `titan-flota-impresion.png` para las etiquetas, `favicon.png` (solo
-  «TITÁN») y `titan-flota-icono.png` (logo completo sobre azul noche).
+- **Logo:** la «T» plateada con filete azul, fondo transparente y contorno
+  negro, que se lee sobre la barra azul noche y sobre papel.
+  `titan-flota-logo.png` se sirve en `/logo.png`; `titan-flota-logo-papel.png`
+  (hoy la misma imagen) en `/logo-papel.png` y `/logo-cedula.png`.
+  `titan-flota-impresion.png` para las etiquetas; `favicon.png` y
+  `titan-flota-icono.png`, la «T» sobre azul noche.
 - **Paleta:** azul noche `#14243A` (navegación y títulos), azul brillante
   `#2563EB` (acción principal, selección), blanco (superficies) y gris muy
   claro `#F4F6F8` (fondo). Los colores de estado solo comunican alertas,
