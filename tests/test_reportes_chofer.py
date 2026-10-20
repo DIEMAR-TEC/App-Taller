@@ -49,6 +49,21 @@ class Reportes(unittest.TestCase):
         cx=Mock();cx.execute.return_value.fetchone.return_value={'usuario_id':3,'sucursal':'CAT'}
         with self.assertRaises(PermissionError):r.fotos(cx,CHOFER,ID)
         self.assertEqual(cx.execute.call_count,1)
+    def test_consulta_normaliza_patente(self):
+        cx=Mock();cx.execute.return_value.fetchall.return_value=[]
+        self.assertEqual(r.consultar(cx,CHOFER,' ab-123 cd ')['patente'],'AB123CD')
+        args=cx.execute.call_args[0][1]
+        self.assertEqual(args,('AB123CD',False,'CAT',2))
+    def test_consulta_patente_invalida(self):
+        cx=Mock()
+        with self.assertRaises(ValueError):r.consultar(cx,CHOFER,'x')
+        cx.execute.assert_not_called()
+    def test_consulta_sin_permiso(self):
+        with self.assertRaises(PermissionError):r.consultar(Mock(),{'id':4,'modulos':[]},'AB123CD')
+    def test_gestor_consulta_todas_las_sucursales(self):
+        cx=Mock();cx.execute.return_value.fetchall.return_value=[{'estado':'PENDIENTE'}]
+        self.assertEqual(len(r.consultar(cx,GESTOR,'AB123CD')['reportes']),1)
+        self.assertTrue(cx.execute.call_args[0][1][1])
 
 class Vencimientos(unittest.TestCase):
     def test_fin_de_mes_y_bisiesto(self):

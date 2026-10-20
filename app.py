@@ -352,6 +352,8 @@ class App(CupoPorPedido, gom.Handler):
                     op = q.get('op', ['listar'])[0]
                     if op == 'contexto':
                         salida = reportes.contexto(cx, self.usuario)
+                    elif op == 'consultar':
+                        salida = reportes.consultar(cx, self.usuario, q.get('patente', [''])[0])
                     elif op == 'fotos':
                         salida = reportes.fotos(cx, self.usuario, q.get('id', [''])[0])
                     else:

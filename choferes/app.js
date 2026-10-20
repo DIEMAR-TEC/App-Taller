@@ -88,3 +88,34 @@ setInterval(()=>{if(!document.hidden)sync();},30000);
  await context();
  if(account&&navigator.onLine)await sync();
 })().catch(e=>status('No se pudo abrir el almacenamiento del teléfono: '+e.message));
+const URGENCIA={PUEDE_ESPERAR:'Puede esperar',OPERA_CON_RIESGO:'Opera con riesgo',UNIDAD_PARADA:'Unidad parada'};
+const fecha=v=>v?new Date(v).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'}):'';
+function estadoReporte(r){
+ if(r.estado==='DESESTIMADA')return['desestimada','Desestimado por el taller','Motivo: '+r.motivo];
+ if(r.estado==='ORDEN_CREADA'){
+   const n='Orden de trabajo N.º '+r.orden_numero;
+   if(r.orden_estado==='cerrada')return['cerrada','Reparación terminada',n+' cerrada'+(r.orden_cierre?' el '+new Date(r.orden_cierre+'T12:00').toLocaleDateString('es-AR'):'')+'.'];
+   if(r.orden_estado==='anulada')return['desestimada','Orden anulada',n+' anulada.'];
+   return['orden','En reparación',n+' abierta.'];
+ }
+ return['pendiente','Recibido, pendiente de revisión','Sin decisión del taller.'];
+}
+$('#lookup').onsubmit=async e=>{
+ e.preventDefault();const patente=$('#plate').value.trim();if(!patente)return;
+ $('#lookup-btn').disabled=true;$('#lookup-status').textContent='Consultando…';$('#results').replaceChildren();
+ try{
+   const r=await fetch('/api/reportes-chofer?op=consultar&patente='+encodeURIComponent(patente),{cache:'no-store',redirect:'error'});
+   const d=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(d.error||(r.status===401||r.status===403?'Sesión no iniciada o sin permiso.':'No se pudo consultar.'));
+   $('#lookup-status').textContent=d.reportes.length?d.reportes.length+' reporte(s) para '+d.patente+'.':'Sin reportes para '+d.patente+'.';
+   for(const x of d.reportes){
+     const [clase,titulo,detalle]=estadoReporte(x),a=document.createElement('article');a.className='estado '+clase;
+     const h=document.createElement('h3');h.textContent=titulo;
+     const desc=document.createElement('p');desc.className='description';desc.textContent=x.descripcion;
+     const det=document.createElement('p');det.textContent=detalle;
+     const s=document.createElement('small');s.textContent=[x.patente+(x.interno?' · '+x.interno:''),URGENCIA[x.urgencia]||x.urgencia,'Informado '+fecha(x.ocurrido_en),x.chofer].join(' · ');
+     a.append(h,desc,det,s);$('#results').append(a);
+   }
+ }catch(err){$('#lookup-status').textContent=err instanceof TypeError?'Sin conexión con el servidor. La consulta requiere señal.':err.message;}
+ finally{$('#lookup-btn').disabled=false;}
+};

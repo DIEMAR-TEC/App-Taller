@@ -24,3 +24,9 @@ button:disabled{opacity:.5;cursor:wait}.secondary{background:var(--panel);color:
 .status{padding:12px;border-left:3px solid var(--brand);background:var(--panel);border-radius:0 8px 8px 0}.status:empty{display:none}
 small{color:var(--muted)}img{max-width:100%;max-height:300px;border-radius:10px;margin:8px}.photos{display:flex;flex-wrap:wrap;gap:8px}.photos img{max-width:200px}
 article h2{font-size:18px;overflow-wrap:anywhere}.description{white-space:pre-wrap;overflow-wrap:anywhere}[hidden]{display:none!important}
+/* Consulta por patente: el estado se distingue por el color del borde. */
+#lookup{display:flex;flex-wrap:wrap;align-items:flex-end;gap:0 10px}#lookup label{flex-basis:100%;margin-top:0}
+#plate{flex:1;min-width:160px;text-transform:uppercase;letter-spacing:.04em}#lookup button{margin:0}
+.estado{border-left:4px solid var(--line-2)}.estado.pendiente{border-left-color:#d97706}.estado.orden{border-left-color:var(--brand)}
+.estado.cerrada{border-left-color:#16a34a}.estado.desestimada{border-left-color:#94a3b8}
+.estado h3{margin:0 0 4px;font-size:17px}.estado p{margin:6px 0}.estado .description{color:var(--ink)}

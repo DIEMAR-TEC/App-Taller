@@ -45,6 +45,29 @@ def listar(cx, u):
         (gestor(u), u['id'], not bool(u.get('solo_su_sucursal')), u.get('sucursal_codigo'), u['id'])).fetchall()]
 
 
+def consultar(cx, u, patente):
+    """Estado de los reportes de una unidad, buscada por patente.
+
+    El chofer ve los de las unidades de su sucursal y los propios; el
+    gestor, los que le permite la restricción de sucursal del rol."""
+    acceso(u)
+    patente = ''.join(ch for ch in str(patente or '').upper() if ch.isalnum())
+    exigir(5 <= len(patente) <= 10, 'Indicar una patente válida.')
+    todo = gestor(u) and not bool(u.get('solo_su_sucursal'))
+    filas = cx.execute('''select r.id, r.descripcion, r.urgencia, r.estado, r.motivo,
+        r.ocurrido_en, r.recibido_en, r.resuelto_en, u.patente, u.interno,
+        us.nombre chofer, o.numero orden_numero, o.estado orden_estado,
+        o.fecha_cierre orden_cierre
+        from reportes_chofer r
+        join unidades u on u.id=r.unidad_id join usuarios us on us.id=r.usuario_id
+        left join ordenes_trabajo o on o.id=r.orden_id
+        where regexp_replace(upper(u.patente), '[^A-Z0-9]', '', 'g')=%s
+          and (%s or u.sucursal=%s or r.usuario_id=%s)
+        order by r.recibido_en desc limit 50''',
+        (patente, todo, u.get('sucursal_codigo'), u['id'])).fetchall()
+    return {'patente': patente, 'reportes': [dict(f) for f in filas]}
+
+
 def obtener(cx, u, id, bloquear=False):
     acceso(u)
     r = cx.execute('select r.*, un.sucursal from reportes_chofer r join unidades un on un.id=r.unidad_id where r.id=%s'
