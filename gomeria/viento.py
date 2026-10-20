@@ -37,7 +37,7 @@ URL_HOJAS = (os.environ.get("VIENTO_HOJAS_URL", "").strip()
              or "http://bi.sistemaexpreso.com.ar/reporte_hojas.xlsx")
 # El BI pide usuario y contraseña (autenticación HTTP, Basic o Digest).
 USUARIO_HOJAS = os.environ.get("VIENTO_HOJAS_USUARIO", "").strip()
-CLAVE_HOJAS = os.environ.get("VIENTO_HOJAS_CLAVE", "")
+CLAVE_HOJAS = os.environ.get("VIENTO_HOJAS_CLAVE", "").strip("\r\n")
 
 # Con clave, el servidor comercial de Open-Meteo; sin clave, el gratuito,
 # que es solo para uso no comercial.
