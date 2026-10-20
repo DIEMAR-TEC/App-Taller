@@ -619,7 +619,7 @@ __CUERPO__
 
 
 _MARCA = """  <div class="marca">
-    <img src="/logo.png" alt="Titán Flota" width="260" height="96">
+    <img src="/logo-papel.png" alt="Titán Flota" width="260" height="87">
     <div class="t">Control de flota, mantenimiento y taller</div>
   </div>
 """

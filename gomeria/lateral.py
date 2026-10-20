@@ -85,7 +85,7 @@ def barra(usuario, ruta):
     return (
         '<aside class="sidebar lateral">'
         '<a class="brand" href="/" aria-label="Titán Flota · Inicio">'
-        '<img src="/logo.png" alt="Titán Flota" width="176" height="65"></a>'
+        '<img src="/logo.png" alt="Titán Flota" width="176" height="55"></a>'
         '<p class="nav-label"><span>Módulos</span></p>'
         '<nav class="nav" aria-label="Módulos principales">'
         + "".join(_enlace(m, ruta) for m in visibles) +

@@ -101,9 +101,9 @@ PANTALLAS = {
     # El módulo liviano para el teléfono: solo gomería y órdenes.
     "/movil":      ("telefono.html",           "text/html; charset=utf-8"),
     "/configuracion": ("configuracion.html",   "text/html; charset=utf-8"),
-    # El logo de Titán Flota sirve sobre papel y sobre la barra azul noche:
-    # la cédula y la orden impresa piden este nombre desde siempre.
-    "/logo-cedula.png": ("titan-flota-logo.png", "image/png"),
+    # El logo con letras azul noche, para papel: la cédula y la orden
+    # impresa piden este nombre desde siempre.
+    "/logo-cedula.png": ("titan-flota-logo-papel.png", "image/png"),
     "/favicon.png": ("favicon.png",             "image/png"),
     "/titan-flota-icono.png": ("titan-flota-icono.png", "image/png"),
     # Titán, el robot del asistente, en dos capas: el cuerpo y el brazo que
@@ -142,7 +142,7 @@ def _sin_permiso(modulo, usuario):
   font:15px Inter,system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px">
 <main style="max-width:440px;padding:28px;text-align:center;background:#fff;
   border:1px solid #e1e6ed;border-radius:14px">
-  <img src="/logo.png" alt="Titán Flota" width="180" height="66" style="display:block;margin:0 auto 18px">
+  <img src="/logo-papel.png" alt="Titán Flota" width="180" height="60" style="display:block;margin:0 auto 18px">
   <p style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;
     color:#b91c1c;font-weight:700;margin:0 0 8px">&#9888; Sin permiso</p>
   <h1 style="font-size:22px;font-weight:700;margin:0 0 12px">{modulo}</h1>

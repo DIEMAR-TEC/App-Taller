@@ -32,7 +32,7 @@ def jstr(d):
 
 
 # Lo único que se sirve sin haber entrado.
-LIBRES = ("/login", "/login/2fa", "/logo.png", "/favicon.png")
+LIBRES = ("/login", "/login/2fa", "/logo.png", "/logo-papel.png", "/favicon.png")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -111,8 +111,11 @@ class Handler(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         ruta, params = u.path, parse_qs(u.query)
 
-        if ruta == "/logo.png":
-            archivo = os.path.join(AQUI, os.pardir, "titan-flota-logo.png")
+        # Letras blancas para la barra azul noche; letras azul noche para el
+        # papel y los fondos blancos (el ingreso, la cédula, lo impreso).
+        if ruta in ("/logo.png", "/logo-papel.png"):
+            archivo = os.path.join(AQUI, os.pardir, "titan-flota-logo.png"
+                                   if ruta == "/logo.png" else "titan-flota-logo-papel.png")
             if not os.path.exists(archivo):
                 return self._error("sin logo", 404)
             return self._responder(open(archivo, "rb").read(), "image/png")
