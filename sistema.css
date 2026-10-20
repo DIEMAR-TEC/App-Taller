@@ -82,8 +82,8 @@ body :is(header.top,body>header) .barra-admin a:hover,body :is(header.top,body>h
 /* ---------- Barra lateral de la portada ---------- */
 body .sidebar{background:var(--tf-nav)!important;border-color:var(--tf-nav-line)!important;color:var(--tf-nav-ink)}
 body .sidebar .brand{border-color:var(--tf-nav-line)!important;justify-content:flex-start}
-body .sidebar .brand img{width:auto!important;height:auto!important;max-width:176px!important;
-  max-height:66px!important;padding:0!important;border-radius:0!important}
+body .sidebar .brand img{width:auto!important;height:auto!important;max-width:128px!important;
+  max-height:42px!important;padding:0!important;border-radius:0!important}
 body .sidebar :is(a,.nav-label,.side-footer,.ajustes){color:var(--tf-nav-muted)!important}
 body .sidebar .nav-label{letter-spacing:.08em;font-size:11px}
 body .sidebar .nav a{border:1px solid transparent;border-radius:var(--tf-radius-sm)}
@@ -205,7 +205,7 @@ body .sidebar .lateral-boton svg{width:15px;height:15px}
   html[data-lateral] .sidebar :is(.nav a,.ajustes){justify-content:flex-start;padding:12px 10px}
   html[data-lateral] .sidebar :is(.brand,.nav-label){justify-content:flex-start;padding-left:6px;padding-right:6px}
   html[data-lateral] .sidebar .brand{padding-bottom:18px}
-  html[data-lateral] .sidebar .brand img{max-width:150px!important}
+  html[data-lateral] .sidebar .brand img{max-width:120px!important}
   html[data-lateral] .sidebar .nav-label span{display:inline}
   html[data-lateral] .sidebar .nav{display:grid;gap:4px}
   html[data-lateral] .sidebar .lateral-boton{display:none}   /* se cierra tocando afuera */
