@@ -416,8 +416,11 @@ def _abridor_hojas():
     """Con usuario cargado, contesta al pedido de credenciales del BI."""
     if not USUARIO_HOJAS:
         return urllib.request.build_opener()
-    claves = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-    claves.add_password(None, URL_HOJAS, USUARIO_HOJAS, CLAVE_HOJAS)
+    # Basic va en el primer pedido: hay servidores que contestan 401 sin
+    # decir el realm y urllib, solo, no reintenta. Si piden Digest, el
+    # segundo manejador contesta a ese 401.
+    claves = urllib.request.HTTPPasswordMgrWithPriorAuth()
+    claves.add_password(None, URL_HOJAS, USUARIO_HOJAS, CLAVE_HOJAS, is_authenticated=True)
     return urllib.request.build_opener(urllib.request.HTTPBasicAuthHandler(claves),
                                        urllib.request.HTTPDigestAuthHandler(claves))
 
@@ -432,6 +435,11 @@ def hojas(forzar=False):
         try:
             with _abridor_hojas().open(req, timeout=120) as r:
                 contenido = r.read()
+        except urllib.error.HTTPError as e:
+            pide = ", ".join(e.headers.get_all("WWW-Authenticate") or []) or "sin encabezado"
+            usuario = "cargado" if USUARIO_HOJAS else "sin cargar"
+            raise RuntimeError(f"No se pudo bajar la planilla de viajes del BI: {e} "
+                               f"(el BI pide: {pide}; usuario {usuario})")
         except Exception as e:
             raise RuntimeError(f"No se pudo bajar la planilla de viajes del BI: {e}")
         if not contenido.startswith(b"PK"):
