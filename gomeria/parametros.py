@@ -385,9 +385,36 @@ def panel(cx, usuario=None):
             select count(*)::int as ayer, max(fecha) as ultima
             from odometros where fuente in {satelitales.en_sql()}
               and fecha >= current_date - 1"""),
+        "satelitales": satelitales_configurados(),
         "puede_gestionar": permisos.gestiona(usuario),
         "puede_administrar": permisos.administra(usuario),
     }
+
+
+def satelitales_configurados():
+    """Las cuentas de satelitales/cuentas.json, para mostrar en Conexiones.
+
+    Solo empresa, proveedor y el nombre de los secrets: los valores viven en
+    GitHub y el servidor no los conoce.
+    """
+    try:
+        cuentas = satelitales.cuentas(solo_activas=False)
+    except Exception:
+        return []
+    salida = []
+    for c in cuentas:
+        respaldo = c.get("respaldo") or []
+        if isinstance(respaldo, (str, dict)):
+            respaldo = [respaldo]
+        respaldo = [r if isinstance(r, str) else r.get("proveedor") for r in respaldo]
+        secrets = list((c.get("credenciales") or {}).values())
+        for r in c.get("respaldo") or []:
+            if isinstance(r, dict):
+                secrets += [n for n in (r.get("credenciales") or {}).values() if n not in secrets]
+        salida.append({"empresa": c.get("empresa"), "proveedor": c.get("proveedor"),
+                       "respaldo": respaldo, "secrets": secrets,
+                       "activa": c.get("activa", True)})
+    return salida
 
 
 def _asignaciones(cx):

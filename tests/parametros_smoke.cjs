@@ -10,6 +10,9 @@ const dir = path.resolve(__dirname, '..');
 
 const datos = (quien) => ({
   instalado: true,
+  satelitales: [{empresa: 'Flota propia', proveedor: 'hawk_api', respaldo: ['hawk_web'],
+                 secrets: ['HAWK_API_USER', 'HAWK_API_PASS', 'HAWK_USER', 'HAWK_PASS'],
+                 activa: true}],
   parametros: {km_origen: 'automatico', km_hora: '06:30',
                combustible_origen: 'manual', combustible_hora: '06:00',
                combustible_fuente: null, combustible_ultima: null,
@@ -130,6 +133,14 @@ const marcas = () => ({
     await page.goto('http://taller.test/parametros');
     await page.locator('#km-lista tr').first().waitFor();
 
+    // Conexiones es lo primero: los satelitales, sin valores de credenciales.
+    const sat = await page.locator('#sat-lista').innerText();
+    for (const x of ['Flota propia', 'Hawk · API', 'Hawk · página web', 'HAWK_API_USER'])
+      assert(sat.includes(x), `falta "${x}" en los satelitales: ${sat}`);
+    assert(await page.locator('#v-conexiones #comb-lista').count() === 1,
+           'la planilla de combustible es una conexión, no una parametrización');
+    assert.equal(await page.locator('#v-combustible #comb-lista').count(), 0);
+
     // Lo primero es lo que ya está cargado, con qué hacer al lado.
     const flota = await page.locator('#km-lista').innerText();
     for (const x of ['De dónde salen los kilómetros', 'Automático',
@@ -191,8 +202,8 @@ const marcas = () => ({
     const asignar = pedidos.find(p => p.op === 'asignar');
     assert.equal(asignar.unidad_id, '2');
 
-    // Combustible: cómo entra, y el link del que se trae.
-    await page.click('[data-vista="combustible"]');
+    // Conexiones: cómo entra el combustible, y el link del que se trae.
+    await page.click('[data-vista="conexiones"]');
     await page.locator('#comb-lista tr').first().waitFor();
     assert((await page.locator('#comb-lista').innerText()).includes('Manual'),
            'no dice cómo entra el combustible hoy');

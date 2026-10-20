@@ -5,10 +5,17 @@ Lo que antes decidía el código y ahora se carga. Sale de
 enteros en Supabase → SQL Editor → Run y se pueden correr las veces que
 haga falta.
 
-La pantalla `/parametros` está **separada por módulo** —*Flota*,
-*Mantenimiento*, *Gomería*, *Combustible*, *Alertas*—, porque el que va a
-cargar una marca de cubierta no tiene por qué pasar por los planes de
-mantenimiento para llegar.
+La pantalla `/parametros` tiene dos grupos de solapas:
+
+- **Conexiones** → *Fuentes de datos*: de dónde entra la información desde
+  afuera. Los satelitales configurados (`gomeria/satelitales/cuentas.json`,
+  ver `ODOMETROS.md`), de dónde salen los kilómetros y cómo entra la
+  planilla de combustible.
+- **Parametrizaciones**, separadas por módulo —*Mantenimiento*, *Gomería*,
+  *Combustible*, *Alertas*—, porque el que va a cargar una marca de cubierta
+  no tiene por qué pasar por los planes de mantenimiento para llegar.
+
+`/parametros#km`, el enlace viejo a la solapa Flota, abre Conexiones.
 
 En cada solapa se ve primero **lo que ya está cargado**, con qué hacer al
 lado: *Editar* abre el formulario —que hasta ahí está guardado— y
@@ -24,7 +31,7 @@ servidor en cada pedido; la barra solo esconde lo que no corresponde.
 
 ## 1. De dónde salen los kilómetros
 
-En `/parametros`, solapa **Flota**. Dos opciones y nada más:
+En `/parametros`, solapa **Conexiones**. Dos opciones y nada más:
 
 | | Qué hace |
 |---|---|
@@ -195,7 +202,8 @@ sistema no ve ninguno.
 
 ## 8. Combustible: cómo entra, proveedores y fluidos
 
-Solapa **Combustible**. Sale de `gomeria/32_fluidos.sql` y
+*Cómo entra el combustible* está en la solapa **Conexiones**; proveedores
+y fluidos, en la solapa **Combustible**. Sale de `gomeria/32_fluidos.sql` y
 `gomeria/33_combustible_origen.sql`.
 
 **Cómo entra el combustible.** Dos maneras, como con el kilometraje:

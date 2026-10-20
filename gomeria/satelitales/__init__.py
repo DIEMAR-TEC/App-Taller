@@ -70,10 +70,10 @@ def proveedor(nombre):
     return importlib.import_module(PROVEEDORES[nombre])
 
 
-def cuentas(ruta=None):
-    """Las cuentas de cuentas.json, sin las que están apagadas."""
+def cuentas(ruta=None, solo_activas=True):
+    """Las cuentas de cuentas.json; por defecto sin las que están apagadas."""
     datos = json.loads(Path(ruta or CUENTAS).read_text(encoding="utf-8"))
-    return [c for c in datos if c.get("activa", True)]
+    return [c for c in datos if not solo_activas or c.get("activa", True)]
 
 
 def secreto(nombre):

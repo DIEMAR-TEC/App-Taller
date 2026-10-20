@@ -202,5 +202,16 @@ class Cuentas(unittest.TestCase):
             self.assertTrue(c.get("credenciales"))
 
 
+class Conexiones(unittest.TestCase):
+    def test_parametros_muestra_las_cuentas_sin_valores_de_secrets(self):
+        import parametros
+        with mock.patch.dict(os.environ, {"HAWK_API_PASS": "no-mostrar"}):
+            (c,) = parametros.satelitales_configurados()
+        self.assertEqual((c["empresa"], c["proveedor"], c["respaldo"]),
+                         ("Flota propia", "hawk_api", ["hawk_web"]))
+        self.assertEqual(c["secrets"], ["HAWK_API_USER", "HAWK_API_PASS", "HAWK_USER", "HAWK_PASS"])
+        self.assertNotIn("no-mostrar", json.dumps(c))
+
+
 if __name__ == "__main__":
     unittest.main()
