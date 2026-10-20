@@ -84,7 +84,9 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync();});
 setInterval(()=>{if(!document.hidden)sync();},30000);
 (async()=>{
  $('#save').disabled=true;
- if('serviceWorker' in navigator)await navigator.serviceWorker.register('/choferes/sw.js').catch(()=>status('No se pudo preparar el uso sin conexión. Revisá la conexión y volvé a abrir.'));
+ // Si había una versión anterior instalada, al tomar el control la nueva se recarga una vez.
+ if('serviceWorker' in navigator&&navigator.serviceWorker.controller){let una=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!una){una=true;location.reload();}});}
+ if('serviceWorker' in navigator)await navigator.serviceWorker.register('/choferes/sw.js',{updateViaCache:'none'}).catch(()=>status('No se pudo preparar el uso sin conexión. Revisá la conexión y volvé a abrir.'));
  await context();
  if(account&&navigator.onLine)await sync();
 })().catch(e=>status('No se pudo abrir el almacenamiento del teléfono: '+e.message));
