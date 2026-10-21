@@ -138,6 +138,14 @@ class DondeVa(unittest.TestCase):
         """El login no lleva barra: todavía no se sabe quién es."""
         self.assertEqual(_pantalla("/login", "login", usuario=None), "login")
 
+    def test_todas_las_pantallas_tienen_body(self):
+        """La barra entra apenas abre el <body>. Repuestos no lo tenía: el
+        lugar de la barra quedaba reservado y vacío."""
+        for ruta, (archivo, tipo) in app.PANTALLAS.items():
+            if tipo.startswith("text/html"):
+                with self.subTest(ruta=ruta):
+                    self.assertRegex((RAIZ / archivo).read_text(encoding="utf-8"), r"<body[^>]*>")
+
     def test_el_script_se_sirve(self):
         self.assertEqual(app.PANTALLAS["/lateral.js"][0], "lateral.js")
         self.assertTrue((RAIZ / "lateral.js").exists())

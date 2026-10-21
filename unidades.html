@@ -293,7 +293,7 @@
   <div class="caja">
     <table>
       <thead><tr id="cabecera"></tr></thead>
-      <tbody id="cuerpo"></tbody>
+      <tbody id="cuerpo"><tr><td colspan="10" class="vacio">Cargando…</td></tr></tbody>
     </table>
     <p class="vacio" id="vacio" hidden>No hay unidades que entren en ese filtro.</p>
   </div>
@@ -358,7 +358,7 @@
           <th style="text-align:right"
               title="El odómetro del equipo en el maestro: lo de antes más lo enganchado.">Km del semi</th><th></th>
         </tr></thead>
-        <tbody id="cuerpo-semis"></tbody>
+        <tbody id="cuerpo-semis"><tr><td colspan="6" class="vacio">Cargando…</td></tr></tbody>
       </table>
       <p class="vacio" id="vacio-semis" hidden>Todavía no hay equipos registrados.
         Los enganches registrados se muestran en esta sección.</p>
@@ -1312,6 +1312,7 @@ async function cargar(){
     const d = await r.json().catch(() => ({}));
     $('#error').textContent = d.error || 'No se pudo leer el maestro de unidades.';
     $('#error').hidden = false;
+    $('#cuerpo').innerHTML = '';
     return;
   }
   DATOS = await r.json();
@@ -1398,7 +1399,11 @@ async function apiEnganche(op, extra) {
 async function cargarSemis() {
   const r = await fetch('/api/enganches');
   const d = await r.json().catch(() => ({error: 'Respuesta ilegible del servidor.'}));
-  if (!r.ok) { $('#semis-sub').textContent = d.error || 'No se pudo leer.'; return; }
+  if (!r.ok) {
+    $('#semis-sub').textContent = d.error || 'No se pudo leer.';
+    $('#cuerpo-semis').innerHTML = '';
+    return;
+  }
   SEMIS.datos = d;
   $('#enganchar').hidden = !d.puede_gestionar;
   $('#recalcular').hidden = !d.puede_gestionar;
