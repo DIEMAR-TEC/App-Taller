@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Repuestos | Titán Flota</title>
@@ -34,8 +37,6 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .brand .divider{width:1px;height:26px;background:rgba(255,255,255,.2)}
 .brand h1{font-size:16px;font-weight:650;letter-spacing:0;margin:0;color:#fff}
 .brand h1 em{font-style:normal;color:inherit}
-.brand .sub{font-size:12px;color:rgba(255,255,255,.74);display:flex;align-items:center;gap:7px}
-.brand .sub::before{content:"";width:7px;height:7px;border-radius:50%;background:#3ccf85}
 body .brand .nav-link{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:13px;font-weight:600;
   color:rgba(255,255,255,.78);background:transparent;border:1px solid rgba(255,255,255,.14);border-radius:8px;
   padding:6px 11px;white-space:nowrap}
@@ -186,7 +187,6 @@ tr.baja .desc{text-decoration:line-through;color:var(--muted)}
   .brand img{height:28px}
   .brand .divider{display:none}
   .brand h1{font-size:15px}
-  .brand .sub{margin-left:0;width:100%}
   .navrow{margin-left:0;width:100%}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .kpi{border-bottom:1px solid var(--rule)}
@@ -203,6 +203,8 @@ tr.baja .desc{text-decoration:line-through;color:var(--muted)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 <script src="/tema.js"></script>
+</head>
+<body>
 
 <div class="top"><div class="top-in">
   <div class="brand">
@@ -211,11 +213,9 @@ tr.baja .desc{text-decoration:line-through;color:var(--muted)}
     <h1>Stock de repuestos</h1>
     <div class="navrow">
       <a class="nav-link" href="/">‹ Inicio</a>
-      <a class="nav-link" href="/gomeria">Gomería</a>
     </div>
-    <div class="sub" id="lastsave">Depósito</div>
   </div>
-  <div class="kpis" id="kpis"></div>
+  <div class="kpis" id="kpis"><div class="kpi"><b><span class="esq" style="width:64px;height:24px;margin:2px 0 6px"></span></b><span>Repuestos activos</span></div><div class="kpi"><b><span class="esq" style="width:64px;height:24px;margin:2px 0 6px"></span></b><span>Unidades en stock</span></div><div class="kpi"><b><span class="esq" style="width:64px;height:24px;margin:2px 0 6px"></span></b><span>A reponer</span></div><div class="kpi"><b><span class="esq" style="width:64px;height:24px;margin:2px 0 6px"></span></b><span>Sin stock</span></div><div class="kpi"><b><span class="esq" style="width:64px;height:24px;margin:2px 0 6px"></span></b><span>Valorizado</span></div><div class="kpi"><b><span class="esq" style="width:64px;height:24px;margin:2px 0 6px"></span></b><span>Movimientos</span></div></div>
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="stock">Repuestos</button>
     <button class="tab" role="tab" data-tab="movs">Movimientos</button>
@@ -224,7 +224,8 @@ tr.baja .desc{text-decoration:line-through;color:var(--muted)}
   </div>
 </div></div>
 
-<div class="wrap" id="view"></div>
+<div class="wrap" id="view"><div class="card"><table><thead><tr><th>Código</th><th>Descripción</th><th>Rubro</th><th>Ubicación</th><th class="num">Mín.</th><th class="num">Stock</th><th class="num">Último costo</th><th class="num">Valorizado</th><th>Estado</th><th></th></tr></thead>
+  <tbody><tr><td colspan="10" class="vacio">Cargando…</td></tr></tbody></table></div></div>
 <div id="modal"></div>
 <div id="toast"></div>
 
@@ -255,12 +256,9 @@ function fechaAR(iso){ if(!iso) return ""; var p=iso.split("-"); return p[2]+"/"
 function esc(t){ return String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function norm(t){ return String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
 
-function marcar(txt){ var el=document.getElementById("lastsave");
-  if(el) el.textContent = txt || "Conectado a la base de datos"; }
 
 /* op: "mov+" | "mov-lote" | "mov-" | "art-save" | "art-toggle" | "art-delete" */
 async function guardar(op,arg){
-  marcar("Guardando…");
   try{
     var cuerpo;
     if(op==="mov+") cuerpo={op:"movimiento_crear",movimiento:arg};
@@ -273,10 +271,8 @@ async function guardar(op,arg){
     await apiRepuestos({method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cuerpo)});
     await cargar();
     pintar();
-    marcar();
     return true;
   }catch(e){
-    marcar("Sin guardar");
     toast("No se pudo guardar: "+((e&&e.message)||e));
     try{ await cargar(); pintar(); }catch(ignorado){}
     return false;
@@ -292,7 +288,7 @@ async function cargar(){
 
 async function refrescar(silencioso){
   try{
-    await cargar(); pintar(); marcar();
+    await cargar(); pintar();
     if(!silencioso) toast("Datos actualizados");
   }catch(e){ if(!silencioso) toast("No se pudo actualizar: "+((e&&e.message)||e)); }
 }
@@ -879,8 +875,8 @@ function abrirDesdeQR(cod){
 /* arranque */
 (async function(){
   var cod = codigoDeLaUrl();
-  try{ await cargar(); pintar(); marcar(); abrirDesdeQR(cod); }
-  catch(e){ marcar("Sin conexión"); document.getElementById("view").innerHTML=
+  try{ await cargar(); pintar(); abrirDesdeQR(cod); }
+  catch(e){ document.getElementById("view").innerHTML=
     '<div class="panel"><h3>No se pudieron cargar los repuestos</h3><p>'+esc((e&&e.message)||e)+'</p></div>'; }
   setInterval(function(){ if(!M) refrescar(true); },45000);
 })();
@@ -1375,14 +1371,12 @@ async function cargarEst(){
   finally{ EST.cargando=false; }
 }
 async function guardarEst(cuerpo, aviso){
-  marcar("Guardando…");
   try{
     var d=await apiEst(cuerpo);
-    await cargarEst(); pintar(); marcar();
+    await cargarEst(); pintar();
     if(aviso) toast(aviso);
     return d||true;
   }catch(e){
-    marcar("Sin guardar");
     toast("No se pudo guardar: "+((e&&e.message)||e));
     await cargarEst(); pintar();
     return false;
@@ -1643,14 +1637,13 @@ async function guardarFormEst(){
   if(otra){ EST.form.err="Ya existe una estantería con ese nombre."; return pintarFormEst(); }
   var cuerpo=Object.assign({},v); if(EST.form.id) cuerpo.id=EST.form.id;
   var nueva=!EST.form.id, form=EST.form;
-  marcar("Guardando…");
   try{
     var d=await apiEst({op:"estanteria_guardar",estanteria:cuerpo});
     EST.ultimo={pasillo:v.pasillo,largo_cm:v.largo_cm,profundidad_cm:v.profundidad_cm,alto_cm:v.alto_cm,
                 pisos:v.pisos,modulos:v.modulos,frente:v.frente};
     EST.form=null; cerrar(); EST.sel=d.id;
-    await cargarEst(); pintar(); marcar(); toast(nueva?"Estantería creada":"Estantería guardada");
-  }catch(e){ marcar("Sin guardar"); form.err=(e&&e.message)||String(e); EST.form=form; pintarFormEst(); }
+    await cargarEst(); pintar(); toast(nueva?"Estantería creada":"Estantería guardada");
+  }catch(e){ form.err=(e&&e.message)||String(e); EST.form=form; pintarFormEst(); }
 }
 
 /* ---------- armar: un pasillo entero ---------- */
@@ -1740,14 +1733,13 @@ async function crearPasillo(){
   EST.est.forEach(e=>{ usados[norm(e.nombre)]=1; });
   var rep=l.filter(e=>usados[norm(e.nombre)]).map(e=>e.nombre);
   if(rep.length){ form.err="Ya existen: "+rep.join(", ")+"."; return pintarFormPasillo(); }
-  marcar("Guardando…");
   try{
     var d=await apiEst({op:"estanterias_crear",estanterias:l});
     EST.ultimo={pasillo:v.pasillo,largo_cm:v.largo_cm,profundidad_cm:v.profundidad_cm,alto_cm:v.alto_cm,
                 pisos:v.pisos,modulos:v.modulos,frente:"sur"};
     EST.form=null; cerrar(); EST.sel=d.ids&&d.ids[0];
-    await cargarEst(); pintar(); marcar(); toast("Pasillo "+v.pasillo+" creado");
-  }catch(e){ marcar("Sin guardar"); form.err=(e&&e.message)||String(e); EST.form=form; pintarFormPasillo(); }
+    await cargarEst(); pintar(); toast("Pasillo "+v.pasillo+" creado");
+  }catch(e){ form.err=(e&&e.message)||String(e); EST.form=form; pintarFormPasillo(); }
 }
 
 /* ---------- arrastrar estanterías en el plano ---------- */
@@ -1897,3 +1889,5 @@ document.addEventListener("keydown", function(ev){
   cargarEst().then(function(){ if(S.arts.length && !document.getElementById("modal").innerHTML) pintar(); });
 })();
 </script>
+</body>
+</html>
