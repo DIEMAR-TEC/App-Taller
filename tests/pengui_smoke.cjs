@@ -83,8 +83,8 @@ let PREFS={tema:'claro',paleta:'diemar'};
      await page.click('[data-l="dia"]');
     }
     if(url==='/repuestos'){
-     assert.equal(await page.locator('.brand img').getAttribute('src'),'/logo.png');
-     assert(await page.locator('.brand img').isVisible());
+     assert.equal(await page.locator('header.top img').getAttribute('src'),'/logo.png');
+     assert(await page.locator('header.top img').isVisible());
      const ghostColor=await page.evaluate(()=>{const bar=document.createElement('div'),b=document.createElement('button');bar.className='bar';b.className='btn ghost';bar.appendChild(b);document.body.appendChild(bar);return getComputedStyle(b).color;});
      assert.equal(ghostColor,'rgb(20, 36, 58)');
     }
