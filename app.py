@@ -124,6 +124,9 @@ PANTALLAS = {
     "/barra.js":    ("barra.js",                "text/javascript; charset=utf-8"),
     # La lista de módulos a la izquierda, en todas las pantallas.
     "/lateral.js":  ("lateral.js",              "text/javascript; charset=utf-8"),
+    # Los esqueletos grises en lugar de los "Cargando…", en todas las
+    # pantallas.
+    "/esqueleto.js": ("esqueleto.js",           "text/javascript; charset=utf-8"),
 }
 
 
@@ -291,7 +294,10 @@ class App(CupoPorPedido, gom.Handler):
             # marca el <html> antes de que se pinte: si esperara, el
             # contenido aparecería pegado al borde y pegaría un salto.
             lateral = '' if 'src="/lateral.js"' in html else '<script src="/lateral.js"></script>'
-            estilos = tema + barra + lateral + '<link rel="stylesheet" href="/sistema.css">'
+            # Los esqueletos de carga. Sin defer: tiene que mirar el HTML
+            # mientras se lee, para que el "Cargando…" no llegue a verse.
+            esqueleto = '' if 'src="/esqueleto.js"' in html else '<script src="/esqueleto.js"></script>'
+            estilos = tema + barra + lateral + esqueleto + '<link rel="stylesheet" href="/sistema.css">'
             # El logo de la empresa en la solapa del navegador. Va acá y no
             # en cada archivo porque cada pantalla que se agregue se lo iba
             # a olvidar: Gomería y Configuración no lo tenían, y en la
