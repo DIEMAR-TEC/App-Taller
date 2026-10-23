@@ -12,6 +12,7 @@ emparejadas.
 La vida de la cubierta no se cierra al salir: la cierra desgaste.recapar
 cuando vuelve, junto con abrir la nueva. Acá solo se mueve el estado.
 """
+import re
 import uuid
 
 import base
@@ -198,6 +199,28 @@ def recibir(cx, datos, usuario=None):
         if not renglon:
             raise ValueError("Esa cubierta no está pendiente en este envío.")
 
+        if v.get("sin_recapar"):
+            # Vuelve sin banda nueva: no la recaparon, se la reparó o se la
+            # trajo de vuelta. Va al depósito como salió y la vida sigue.
+            motivo = _texto(v.get("motivo"), 300)
+            if not motivo:
+                raise ValueError("Indicar por qué vuelve sin recapar.")
+            costo = v.get("costo")
+            cx.execute("""update recapado_renglones
+                             set estado = 'volvio', fecha_vuelta = current_date,
+                                 motivo = %s, costo = %s
+                           where id = %s""",
+                       (f"Sin recapar · {motivo}",
+                        float(costo) if costo not in (None, "") else None,
+                        renglon["id"]))
+            cx.execute("update cubiertas set estado = 'stock' where id = %s",
+                       (cubierta_id,))
+            base._log(cx, uuid.uuid4(), "recapado", cubierta_id=cubierta_id,
+                      usuario=(usuario or {}).get("nombre"),
+                      nota=f"Vuelve sin recapar · {motivo} · remito {envio_id}")
+            hecho.append({"cubierta_id": cubierta_id, "estado": "sin_recapar"})
+            continue
+
         if v.get("rechazada"):
             # El recapador dice que la carcasa no va. No vuelve al stock:
             # se da de baja con el motivo, que es lo que pasó de verdad.
@@ -222,7 +245,8 @@ def recibir(cx, datos, usuario=None):
             costo=v.get("costo"),
             inicial_mm=v.get("inicial_mm"),
             usuario=(usuario or {}).get("nombre"),
-            nota=f"Remito {envio_id}")
+            nota=" · ".join(filter(None, [f"Remito {envio_id}",
+                                          _texto(v.get("motivo"), 300)])))
         costo = v.get("costo")
         cx.execute("""update recapado_renglones
                          set estado = 'volvio', fecha_vuelta = current_date,
@@ -299,6 +323,13 @@ def anular(cx, datos, usuario=None):
 # =====================================================================
 # LA FACTURA DEL RECAPADOR
 # =====================================================================
+def _clave(codigo):
+    """El fuego para comparar: sin espacios ni guiones y sin ceros adelante.
+    La factura escribe '020' y el sistema puede tener '20', o al revés."""
+    plano = re.sub(r"[^A-Za-z0-9]", "", str(codigo or "")).upper()
+    return plano.lstrip("0") or plano
+
+
 def cotejar(cx, datos, usuario=None):
     """Cruza lo que dice la factura contra lo que el sistema sabe que mandó.
 
@@ -326,23 +357,38 @@ def cotejar(cx, datos, usuario=None):
         datos.get("archivos"), [a["codigo"] for a in afuera],
         cliente=datos.get("cliente"))
 
-    porcodigo = {a["codigo"]: a for a in afuera}
+    porclave = {_clave(a["codigo"]): a for a in afuera}
     vuelven, desconocidas, vistos = [], [], set()
     for r in leido["renglones"]:
-        codigo = r.get("codigo_fuego")
-        encontrada = porcodigo.get(codigo)
+        clave = _clave(r.get("codigo_fuego"))
+        encontrada = porclave.get(clave) if clave else None
         if not encontrada:
             desconocidas.append(r)
             continue
         # La misma goma dos veces en la factura es un error de carga, no
         # dos recapados: se cobra una sola.
-        if codigo in vistos:
+        if clave in vistos:
             desconocidas.append({**r, "repetida": True})
             continue
-        vistos.add(codigo)
+        vistos.add(clave)
         vuelven.append({**encontrada, **r})
 
-    faltan = [a for a in afuera if a["codigo"] not in vistos]
+    # Las que no salieron en un remito pero existen: se dice dónde están,
+    # así se ve si es un número mal leído o una goma que salió sin remito.
+    numeros = [d["codigo_fuego"] for d in desconocidas if d.get("codigo_fuego")]
+    if numeros:
+        claves = sorted({_clave(n) for n in numeros})
+        filas = cx.execute("""
+            select id, codigo, estado, marca from cubiertas
+            where ltrim(upper(regexp_replace(codigo, '[^A-Za-z0-9]', '', 'g')), '0')
+                  = any(%s)""", (claves,)).fetchall()
+        enbase = {_clave(f["codigo"]): dict(f) for f in filas}
+        for d in desconocidas:
+            hallada = enbase.get(_clave(d.get("codigo_fuego")))
+            if hallada:
+                d["en_sistema"] = hallada
+
+    faltan = [a for a in afuera if _clave(a["codigo"]) not in vistos]
     return {
         "factura": leido.get("factura"),
         "fecha": leido.get("fecha"),

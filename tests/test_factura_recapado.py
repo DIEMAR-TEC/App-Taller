@@ -45,6 +45,8 @@ class Base:
     def execute(self, consulta, valores=()):
         if "v_recapado_afuera" in consulta:
             return Filas(self.afuera)
+        if "from cubiertas" in consulta:
+            return Filas([])
         raise AssertionError(f"Consulta inesperada: {consulta}")
 
 
@@ -81,6 +83,13 @@ class ElCruce(unittest.TestCase):
         # Y las otras dos siguen contando como que no volvieron.
         self.assertEqual([x["codigo"] for x in salida["faltan"]],
                          ["4522", "4523"])
+
+    def test_el_fuego_se_cruza_sin_ceros_adelante(self):
+        """La factura dice 'OTRAS 020' y el sistema tiene 20."""
+        afuera = [{"codigo": "20", "cubierta_id": 5, "envio_id": "REC-00008",
+                   "dias_afuera": 2}]
+        salida = cotejar([r("020")], afuera=afuera)
+        self.assertEqual([x["cubierta_id"] for x in salida["vuelven"]], [5])
 
     def test_la_misma_goma_dos_veces_se_cobra_una(self):
         """Dos renglones con el mismo fuego es un error de carga, no dos
