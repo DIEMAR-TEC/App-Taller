@@ -95,6 +95,12 @@
   .lector-acciones{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
     margin-top:10px}
   .lector .pista{font-size:12px}
+  .lector-vistas{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .lector-vistas:empty{display:none}
+  .lector-vistas a{display:block;width:120px;height:120px;border-radius:8px;overflow:hidden;
+    border:1px solid var(--hairline-2);background:var(--surface-2)}
+  .lector-vistas img,.lector-vistas iframe{width:100%;height:100%;object-fit:contain;
+    border:0;pointer-events:none}
   .lector-dudas{margin-top:10px;font-size:12.5px;line-height:1.6}
   .lector-dudas b{display:block;margin-bottom:3px}
   .lector-dudas ul{margin:0;padding-left:18px}
@@ -423,6 +429,7 @@
       <button class="btn" id="xLeer" hidden>Leer factura</button>
       <span class="pista" id="xArchivoNombre"></span>
     </div>
+    <div class="lector-vistas" id="xVistas"></div>
   </div>
 
   <div class="campos">
@@ -1363,7 +1370,19 @@ $('#xOtraUnidad').onclick = () => {
    ===================================================================== */
 const LADO_MAXIMO = 2200;   // píxeles del lado más largo
 
+/* Una miniatura por archivo, para ver que la foto salió bien. Un clic
+   la abre entera en otra pestaña. */
+function mostrarVistas(files) {
+  (D.vistas || []).forEach(u => URL.revokeObjectURL(u));
+  D.vistas = files.map(f => URL.createObjectURL(f));
+  $('#xVistas').innerHTML = files.map((f, i) => `<a href="${D.vistas[i]}" target="_blank"
+    rel="noopener" title="${esc(f.name)}">${f.type === 'application/pdf'
+      ? `<iframe src="${D.vistas[i]}#toolbar=0&view=FitH" tabindex="-1"></iframe>`
+      : `<img src="${D.vistas[i]}" alt="${esc(f.name)}">`}</a>`).join('');
+}
+
 function limpiarLector() {
+  mostrarVistas([]);
   D.facturaArchivos = [];
   $('#xArchivo').value = '';
   $('#xArchivoNombre').textContent = '';
@@ -1409,6 +1428,7 @@ $('#xArchivo').onchange = async () => {
   if (!files.length) return limpiarLector();
   $('#avisoExterna').innerHTML = '';
   $('#xArchivoNombre').textContent = 'Preparando…';
+  mostrarVistas(files);
   try {
     D.facturaArchivos = await Promise.all(files.map(achicar));
     const peso = D.facturaArchivos.reduce((n, a) => n + a.contenido.length * 0.75, 0);
