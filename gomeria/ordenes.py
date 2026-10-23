@@ -28,6 +28,7 @@ movimiento. No hay una cuenta del depósito y otra del taller: hay una.
 """
 from datetime import date, timedelta
 
+import alertas
 import permisos
 import proveedores as prov
 import solicitudes as sol
@@ -360,7 +361,27 @@ def ficha(cx, orden_id):
                    cantidad, precio
             from ordenes_repuestos where orden_id = %s order by id
         """, (orden_id,)).fetchall()],
+        **_service_de(cx, cabecera),
     }
+
+
+def _service_de(cx, orden):
+    """El service que registró la orden y el que queda si se anula."""
+    if orden.get("mantenimiento") != "preventivo" or not orden.get("unidad_id"):
+        return {}
+    propio = cx.execute("select id, fecha, km from services where orden_id = %s",
+                        (orden["id"],)).fetchone()
+    if not propio:
+        return {}
+    solo_service = ("and sistema = 'service'"
+                    if tiene_columna(cx, "services", "sistema") else "")
+    anterior = cx.execute(f"""
+        select fecha, km from services
+        where unidad_id = %s and id <> %s {solo_service}
+        order by fecha desc, km desc, id desc limit 1
+    """, (orden["unidad_id"], propio["id"])).fetchone()
+    return {"service": dict(propio),
+            "service_anterior": dict(anterior) if anterior else None}
 
 
 def historial(cx, patente=None, unidad_id=None):
@@ -789,9 +810,19 @@ def externa(cx, datos, usuario):
         returning id, numero
     """, tuple(valores)).fetchone()
 
-    # Una externa preventiva queda clasificada, pero no registra el service:
-    # eso se hace desde Control de flota o Alertas.
-    return {"ok": True, "id": fila["id"], "numero": fila["numero"]}
+    # Una externa preventiva es un service hecho afuera: queda registrado
+    # con la fecha y los km de la factura, atado a esta orden. Anular la
+    # orden lo borra y la unidad vuelve al service anterior.
+    salida = {"ok": True, "id": fila["id"], "numero": fila["numero"]}
+    if mantenimiento == "preventivo":
+        detalle = _texto(datos.get("solicitado"), 60)
+        salida["service_id"] = alertas.guardar_service(cx, {
+            "unidad_id": unidad_id, "fecha": fecha.isoformat(), "km": km,
+            "tipo": detalle or "Servicio externo", "taller": taller,
+            "observaciones": f"Servicio externo Nº {fila['numero']} · Fact. {factura}",
+            "orden_id": fila["id"],
+        }, usuario=(usuario or {}).get("nombre"))
+    return salida
 
 
 def externas(cx, datos, usuario):

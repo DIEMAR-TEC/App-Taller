@@ -120,21 +120,72 @@ class OrdenInterna(unittest.TestCase):
         self.assertFalse(any("services" in sql for sql, _ in cx.consultas))
 
 
+class BaseExterna(BaseFalsa):
+    """La carga de la externa más el registro de su service."""
+
+    def execute(self, consulta, valores=()):
+        sql = " ".join(consulta.split())
+        if sql.startswith("select id, patente, km_actual from unidades"):
+            self.consultas.append((sql, valores))
+            return Resultado({"id": 7, "patente": "AD247MQ", "km_actual": 123000})
+        if sql.startswith("select p.cada_km from unidades"):
+            self.consultas.append((sql, valores))
+            return Resultado({"cada_km": 20000})
+        if sql.startswith("select fecha, km from odometros"):
+            self.consultas.append((sql, valores))
+            return Resultado({"fecha": date(2026, 9, 1), "km": 120000})
+        if sql.startswith("select id from services where orden_id"):
+            self.consultas.append((sql, valores))
+            return Resultado(None)
+        if sql.startswith("insert into services"):
+            self.consultas.append((sql, valores))
+            return Resultado({"id": 19})
+        if sql.startswith("delete from alertas_silenciadas"):
+            self.consultas.append((sql, valores))
+            return Resultado()
+        return super().execute(consulta, valores)
+
+
+EXTERNA = {"unidad_id": 7, "gestion": "mantenimiento",
+           "fecha": "2026-09-08", "km": 122500,
+           "factura": "A-123", "monto": 250000,
+           "taller": "Iveco", "solicitado": "Service M6"}
+
+
 class ServicioExterno(unittest.TestCase):
-    def test_un_preventivo_nace_cerrado_sin_registrar_service(self):
-        cx = BaseFalsa()
-        salida = ordenes.externa(cx, {
-            "unidad_id": 7, "mantenimiento": "preventivo",
-            "gestion": "mantenimiento",
-            "fecha": "2026-09-08", "km": 122500,
-            "factura": "A-123", "monto": 250000,
-            "taller": "Iveco", "solicitado": "Service M6",
-        }, GESTOR)
+    def test_un_preventivo_registra_el_service_atado_a_la_orden(self):
+        cx = BaseExterna()
+        salida = ordenes.externa(cx, {**EXTERNA, "mantenimiento": "preventivo"}, GESTOR)
         self.assertEqual(salida["id"], 41)
-        self.assertNotIn("service_id", salida)
+        self.assertEqual(salida["service_id"], 19)
         insercion = next(x for x in cx.consultas if x[0].startswith("insert into ordenes_trabajo"))
         self.assertIn("'cerrada'", insercion[0])
+        service = next(x for x in cx.consultas if x[0].startswith("insert into services"))
+        self.assertEqual(service[1][1], "2026-09-08")
+        self.assertEqual(service[1][2], 122500)
+        self.assertEqual(service[1][-1], 41)
+
+    def test_un_correctivo_no_toca_los_services(self):
+        cx = BaseExterna()
+        salida = ordenes.externa(cx, {**EXTERNA, "mantenimiento": "correctivo"}, GESTOR)
+        self.assertNotIn("service_id", salida)
         self.assertFalse(any("services" in sql for sql, _ in cx.consultas))
+
+    def test_anular_la_externa_borra_su_service(self):
+        orden = {"id": 41, "numero": 82, "tipo": "externa", "estado": "cerrada",
+                 "mantenimiento": "preventivo", "unidad_id": 7}
+        cx = BaseFalsa(orden)
+        original = cx.execute
+
+        def execute(consulta, valores=()):
+            sql = " ".join(consulta.split())
+            if sql.startswith("select movimiento_id from ordenes_repuestos"):
+                cx.consultas.append((sql, valores))
+                return Resultado(muchas=[])
+            return original(consulta, valores)
+        cx.execute = execute
+        ordenes.anular(cx, {"id": 41}, GESTOR)
+        self.assertIn(("delete from services where orden_id = %s", (41,)), cx.consultas)
 
 
 class ServiceCreaOrden(unittest.TestCase):
