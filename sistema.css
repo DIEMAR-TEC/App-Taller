@@ -81,9 +81,9 @@ body :is(header.top,body>header) .barra-admin a:hover,body :is(header.top,body>h
 
 /* ---------- Barra lateral de la portada ---------- */
 body .sidebar{background:var(--tf-nav)!important;border-color:var(--tf-nav-line)!important;color:var(--tf-nav-ink)}
-body .sidebar .brand{border-color:var(--tf-nav-line)!important;justify-content:flex-start}
-body .sidebar .brand img{width:auto!important;height:auto!important;max-width:128px!important;
-  max-height:42px!important;padding:0!important;border-radius:0!important}
+body .sidebar .brand{border-color:var(--tf-nav-line)!important;justify-content:center}
+body .sidebar .brand img{width:auto!important;height:auto!important;max-width:124px!important;
+  max-height:54px!important;padding:0!important;border-radius:0!important}
 body .sidebar :is(a,.nav-label,.side-footer,.ajustes){color:var(--tf-nav-muted)!important}
 body .sidebar .nav-label{letter-spacing:.08em;font-size:11px}
 body .sidebar .nav a{border:1px solid transparent;border-radius:var(--tf-radius-sm)}
@@ -205,7 +205,7 @@ body .sidebar .lateral-boton svg{width:15px;height:15px}
   html[data-lateral] .sidebar :is(.nav a,.ajustes){justify-content:flex-start;padding:12px 10px}
   html[data-lateral] .sidebar :is(.brand,.nav-label){justify-content:flex-start;padding-left:6px;padding-right:6px}
   html[data-lateral] .sidebar .brand{padding-bottom:18px}
-  html[data-lateral] .sidebar .brand img{max-width:120px!important}
+  html[data-lateral] .sidebar .brand img{max-width:90px!important}
   html[data-lateral] .sidebar .nav-label span{display:inline}
   html[data-lateral] .sidebar .nav{display:grid;gap:4px}
   html[data-lateral] .sidebar .lateral-boton{display:none}   /* se cierra tocando afuera */
@@ -416,11 +416,11 @@ body .button:hover{color:var(--ink)}
   aspect-ratio:512/628;cursor:default}
 .titan-robot .tr-flota{position:absolute;inset:0;animation:tr-flotar 3.2s ease-in-out infinite}
 .titan-robot img{position:absolute;inset:0;width:100%;height:100%;display:block;margin:0;max-width:none;max-height:none;border-radius:0}
-.titan-robot .tr-brazo{transform-origin:22.5% 54.1%;animation:tr-saludar 6s ease-in-out .4s infinite}
-.titan-robot .tr-ojo{position:absolute;background:#0a2147;border-radius:40%;transform:scaleY(0);
+.titan-robot .tr-brazo{transform-origin:27.8% 48.2%;animation:tr-saludar 6s ease-in-out .4s infinite}
+.titan-robot .tr-ojo{position:absolute;background:#1e2f42;border-radius:40%;transform:scaleY(0);
   animation:tr-parpadear 4.6s linear infinite}
-.titan-robot .tr-ojo.izq{left:33.6%;top:15.8%;width:11.4%;height:11.4%}
-.titan-robot .tr-ojo.der{left:57.4%;top:18.9%;width:13.6%;height:10.4%}
+.titan-robot .tr-ojo.izq{left:44%;top:18.8%;width:8%;height:6.6%}
+.titan-robot .tr-ojo.der{left:61.8%;top:17.3%;width:7.5%;height:6.6%}
 .titan-robot .tr-sombra{position:absolute;left:18%;right:18%;bottom:-5%;height:5%;border-radius:50%;
   background:rgba(20,36,58,.18);animation:tr-sombra 3.2s ease-in-out infinite}
 .titan-robot.entra{animation:tr-entrar .6s cubic-bezier(.2,1.4,.4,1) both}
@@ -449,10 +449,10 @@ body .button:hover{color:var(--ink)}
 .titan-robot:is(.piensa,.habla) :is(.tr-cuerpo,.tr-brazo,.tr-ojo){opacity:0}
 .titan-robot:is(.piensa,.habla) .tr-brazo{animation:none}
 .titan-robot.piensa .tr-pose-piensa,.titan-robot.habla .tr-pose-habla{opacity:1}
-/* La boca: una tapa del color de la cara sube y baja sobre la boca abierta
+/* La boca: una tapa del color de la cara sube y baja sobre la sonrisa
    del dibujo, así parece que habla. */
-.titan-robot .tr-labio{position:absolute;left:40.4%;top:28.3%;width:11.6%;height:4.4%;border-radius:0 0 45% 45%;
-  background:#0a2143;transform-origin:50% 100%;transform:scaleY(0);opacity:0}
+.titan-robot .tr-labio{position:absolute;left:43.5%;top:23.7%;width:8.7%;height:2.6%;border-radius:0 0 45% 45%;
+  background:#1f3040;transform-origin:50% 100%;transform:scaleY(0);opacity:0}
 .titan-robot.habla .tr-labio{opacity:1;animation:tr-hablar .24s ease-in-out infinite alternate}
 .titan-robot.habla .tr-flota{animation:tr-flotar 3.2s ease-in-out infinite,tr-asentir .5s ease-in-out infinite alternate}
 /* Pensando: inclina la cabeza, parpadea más y le salen burbujas de pensamiento. */

@@ -15,7 +15,7 @@
 
   /* Titán, el robot del asistente: grande, animado y saludando. Las
      animaciones están en sistema.css (.titan-robot). */
-  const robot = `<span class="titan-robot entra" style="--alto:128px" role="img"
+  const robot = `<span class="titan-robot entra" style="--alto:172px" role="img"
       aria-label="Titán, el robot asistente, saludando" title="¡Hola! Soy Titán">
       <span class="tr-sombra"></span>
       <span class="tr-flota">

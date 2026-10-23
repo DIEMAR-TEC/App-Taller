@@ -479,14 +479,31 @@ def resumen(cx):
 # =====================================================================
 def services(cx):
     """Una fila por unidad activa, con lo que le falta para el próximo."""
+    # La orden que dejó el último service: si fue un servicio externo, la
+    # ficha de la unidad lleva a su factura.
     filas = _tabla(cx, """
-        select * from v_services_hoy
-        order by case estado
+        select v.*, s.orden_id, ot.numero as orden_numero,
+               ot.tipo as orden_tipo, ot.factura as orden_factura,
+               ot.taller as orden_taller
+        from v_services_hoy v
+        left join services s on s.id = v.service_id
+        left join ordenes_trabajo ot on ot.id = s.orden_id
+        order by case v.estado
                    when 'vencido' then 0 when 'urgente' then 1
                    when 'proximo' then 2 when 'ok' then 3
                    when 'sin_odometro' then 4 else 5 end,
-                 km_restantes nulls last, patente
+                 v.km_restantes nulls last, v.patente
     """)
+    if filas is None:
+        # Sin las órdenes instaladas, los services igual se ven.
+        filas = _tabla(cx, """
+            select * from v_services_hoy
+            order by case estado
+                       when 'vencido' then 0 when 'urgente' then 1
+                       when 'proximo' then 2 when 'ok' then 3
+                       when 'sin_odometro' then 4 else 5 end,
+                     km_restantes nulls last, patente
+        """)
     return filas if filas is not None else []
 
 

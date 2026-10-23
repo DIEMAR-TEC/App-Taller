@@ -145,7 +145,7 @@ def _sin_permiso(modulo, usuario):
   font:15px Inter,system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px">
 <main style="max-width:440px;padding:28px;text-align:center;background:#fff;
   border:1px solid #e1e6ed;border-radius:14px">
-  <img src="/logo-papel.png" alt="Titán Flota" width="180" height="60" style="display:block;margin:0 auto 18px">
+  <img src="/logo-papel.png" alt="Titán Flota" width="140" height="60" style="display:block;margin:0 auto 18px">
   <p style="font-size:12px;letter-spacing:.06em;text-transform:uppercase;
     color:#b91c1c;font-weight:700;margin:0 0 8px">&#9888; Sin permiso</p>
   <h1 style="font-size:22px;font-weight:700;margin:0 0 12px">{modulo}</h1>

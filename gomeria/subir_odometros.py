@@ -1,7 +1,8 @@
 """
 Sube al Supabase de la app las lecturas de odómetro del satelital.
 
-Quien las consigue es hawk.py, que entra al satelital y le pide la flota.
+Quien las consigue es leer_km.py, que le pide la flota al satelital de
+cada empresa (ver satelitales/).
 Este archivo es la otra mitad: las deja en la tabla `odometros`
 (ver 05_odometros.sql), una fila por unidad y por día.
 
@@ -101,8 +102,11 @@ def filas_de(lecturas):
     return [porclave[k] for k in sorted(porclave)]
 
 
-def subir(lecturas, url=None):
-    """Guarda las lecturas del día. Devuelve cuántas guardó."""
+def subir(lecturas, url=None, fuente="hawk"):
+    """Guarda las lecturas del día. Devuelve cuántas guardó.
+
+    `fuente` es la del proveedor (ver satelitales/__init__.py).
+    """
     url = url or _url()
     if not url:
         print("\n[supabase] sin SUPABASE_DB_URL: no se suben los odometros")
@@ -137,13 +141,13 @@ def subir(lecturas, url=None):
             # puede volver a correr a mano sin ensuciar la serie.
             cur.executemany("""
                 insert into odometros (patente, fecha, km, ultimo_reporte, id_gps, fuente)
-                values (%s, %s, %s, %s, %s, 'hawk')
+                values (%s, %s, %s, %s, %s, %s)
                 on conflict (patente, fecha, fuente) do update
                    set km             = excluded.km,
                        ultimo_reporte = excluded.ultimo_reporte,
                        id_gps         = excluded.id_gps,
                        leido          = now()
-            """, filas)
+            """, [f + (fuente,) for f in filas])
 
             despues = cx.execute("select count(*) from odometros").fetchone()[0]
             dias = sorted({f[1] for f in filas})

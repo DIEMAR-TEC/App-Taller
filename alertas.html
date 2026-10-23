@@ -485,7 +485,8 @@ function pintarServices() {
                    km_dudoso:'Km no coinciden'};
   $('#filasSrv').innerHTML = lista.length ? lista.map(s => `<tr>
       <td><b>${esc(pat(s.patente))}</b>${s.interno ? ` <span class="chico">int. ${esc(s.interno)}</span>` : ''}</td>
-      <td>${esc(fecha(s.ultimo_fecha))}${s.tipo ? ` <span class="chico">${esc(s.tipo)}</span>` : ''}</td>
+      <td>${esc(fecha(s.ultimo_fecha))}${s.tipo ? ` <span class="chico">${esc(s.tipo)}</span>` : ''}${
+        s.orden_tipo === 'externa' ? ` <a class="chico" href="/ordenes?orden=${encodeURIComponent(s.orden_id)}">servicio externo Nº ${esc(s.orden_numero)}</a>` : ''}</td>
       <td class="num">${num(s.ultimo_km)}</td>
       <td class="num">${num(s.cada_km)}</td>
       <td class="num">${num(s.proximo_km)}</td>

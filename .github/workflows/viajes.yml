@@ -35,6 +35,8 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           OPEN_METEO_APIKEY: ${{ secrets.OPEN_METEO_APIKEY }}
           VIENTO_HOJAS_URL: ${{ vars.VIENTO_HOJAS_URL }}
+          VIENTO_HOJAS_USUARIO: ${{ secrets.VIENTO_HOJAS_USUARIO }}
+          VIENTO_HOJAS_CLAVE: ${{ secrets.VIENTO_HOJAS_CLAVE }}
         run: |
           set -o pipefail
           python gomeria/traer_viajes.py 2>&1 | tee salida.txt

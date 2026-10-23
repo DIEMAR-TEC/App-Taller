@@ -54,8 +54,9 @@
     font:inherit;outline:none;width:100%}
   textarea{resize:vertical;min-height:66px;line-height:1.45}
   input:focus,select:focus,textarea:focus{border-color:color-mix(in srgb,var(--brand) 60%,transparent)}
-  .barra input{max-width:340px}
-  .barra select{max-width:230px}
+  .barra input{max-width:340px;flex:1 1 180px;min-width:0}
+  .barra select{max-width:230px;flex:0 1 200px;min-width:0}
+  .barra .altas{display:flex;gap:9px;flex-wrap:wrap}
   .btn{border:0;border-radius:10px;background:var(--brand);color:var(--marca-ink,#fff);
     padding:10px 15px;font:inherit;font-weight:800;cursor:pointer;white-space:nowrap}
   .btn.alt{background:var(--surface-3);border:1px solid var(--hairline-2);color:var(--ink)}
@@ -94,6 +95,12 @@
   .lector-acciones{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
     margin-top:10px}
   .lector .pista{font-size:12px}
+  .lector-vistas{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .lector-vistas:empty{display:none}
+  .lector-vistas a{display:block;width:120px;height:120px;border-radius:8px;overflow:hidden;
+    border:1px solid var(--hairline-2);background:var(--surface-2)}
+  .lector-vistas img,.lector-vistas iframe{width:100%;height:100%;object-fit:contain;
+    border:0;pointer-events:none}
   .lector-dudas{margin-top:10px;font-size:12.5px;line-height:1.6}
   .lector-dudas b{display:block;margin-bottom:3px}
   .lector-dudas ul{margin:0;padding-left:18px}
@@ -122,6 +129,8 @@
     border:1px solid rgba(227,93,98,.3)}
   .aviso.bien{background:rgba(49,189,101,.12);color:var(--ok);
     border:1px solid rgba(49,189,101,.3)}
+  .aviso.nota{background:var(--surface-2);color:var(--ink);
+    border:1px solid var(--hairline-2)}
   .alta-prov{background:var(--surface-2);border:1px solid var(--hairline);
     border-radius:12px;padding:12px}
   .alta-prov p{margin:0 0 10px;font-size:13px}
@@ -299,8 +308,10 @@
     <input id="buscar" placeholder="Buscar patente, interno, número o trabajo">
     <select id="filtroUnidad"><option value="">Todas las unidades</option></select>
     <button class="btn alt" id="verHistorial">Historial de la unidad</button>
-    <button class="btn espacio" id="nueva">+ Abrir orden</button>
-    <button class="btn alt" id="nuevaExterna">+ Servicio externo</button>
+    <div class="altas espacio">
+      <button class="btn" id="nueva">+ Abrir orden</button>
+      <button class="btn alt" id="nuevaExterna">+ Servicio externo</button>
+    </div>
   </div>
   <div id="avisoLista"></div>
 
@@ -418,6 +429,7 @@
       <button class="btn" id="xLeer" hidden>Leer factura</button>
       <span class="pista" id="xArchivoNombre"></span>
     </div>
+    <div class="lector-vistas" id="xVistas"></div>
   </div>
 
   <div class="campos">
@@ -441,12 +453,13 @@
       <option value="preventivo">Preventivo</option>
       <option value="correctivo">Correctivo</option>
     </select>
-      <p class="pista">Clasifica la orden. El service se registra solo desde
-        Control de flota o Alertas, y ese registro crea su propia orden.</p></div>
+      <p class="pista">Preventivo: registra el service de la unidad con la fecha y
+        los kilómetros de la factura.</p></div>
     <div><label>Fecha</label><input id="xFecha" type="date" required></div>
     <div><label>Nº de factura</label><input id="xFactura" placeholder="0001-00012345"></div>
     <div><label id="xMontoRotulo">Monto sin IVA</label><input id="xMonto" type="number" min="0" step="0.01"></div>
-    <div class="solo-una"><label>Kilómetros</label><input id="xKm" type="number" min="0" step="1" required></div>
+    <div class="solo-una"><label>Kilómetros</label><input id="xKm" type="number" min="0" step="1" required>
+      <p class="pista" id="xKmPista"></p></div>
     <div><label>Proveedor</label>
       <input id="xTaller" list="xProveedores" autocomplete="off" placeholder="Nombre o CUIT">
       <datalist id="xProveedores"></datalist><input type="hidden" id="xProveedor">
@@ -723,6 +736,8 @@ function dibujarOrden() {
         ${dato('Monto', '$ ' + money(o.monto))}
         ${dato('Chofer', o.chofer)}
         ${dato('Cargó', o.usuario)}
+        ${D.orden.service ? dato('Service registrado',
+          `${fecha(D.orden.service.fecha)} · ${nfm.format(Number(D.orden.service.km))} km`) : ''}
       </div></div>`;
     if (o.solicitado)
       html += `<div class="bloque"><h3>Qué se hizo</h3><p>${esc(o.solicitado)}</p></div>`;
@@ -814,6 +829,18 @@ function dibujarOrden() {
   html += `</div>`;
 
   $('#cuerpoOrden').innerHTML = html;
+}
+
+function textoAnular() {
+  const o = D.orden.orden, sv = D.orden.service, ant = D.orden.service_anterior;
+  let texto = o.tipo === 'externa' ? 'Anular el servicio externo.'
+    : 'Anular la orden. Los repuestos vuelven al stock.';
+  if (sv)
+    texto += `\n\nTambién se anula el service registrado el ${fecha(sv.fecha)} a ${
+      nfm.format(Number(sv.km))} km. ` + (ant
+      ? `La unidad vuelve al service anterior: ${fecha(ant.fecha)}, ${nfm.format(Number(ant.km))} km.`
+      : 'La unidad queda sin service registrado.');
+  return texto + '\n\n¿Confirmar?';
 }
 
 function avisoOrden(texto, bien) {
@@ -1079,7 +1106,7 @@ document.addEventListener('click', async ev => {
         await sobreOrden('reabrir', {}, 'Abierta de nuevo.');
       break;
     case 'anular':
-      if (confirm('Anular la orden. Los repuestos vuelven al stock. ¿Va?'))
+      if (confirm(textoAnular()))
         await sobreOrden('anular', {}, x => x && x.devueltos
           ? `Anulada. Volvieron ${x.devueltos} repuesto${x.devueltos === 1 ? '' : 's'} al stock.`
           : 'Anulada.');
@@ -1204,6 +1231,7 @@ $('#nuevaExterna').onclick = () => {
   $('#xMantenimiento').value = '';
   ['xFactura','xMonto','xKm','xTaller','xDetalle','xSolicitud','xGestion']
     .forEach(c => $('#' + c).value = '');
+  delete $('#xKm').dataset.auto; $('#xKmPista').textContent = '';
   D.cuitLeido = ''; D.provGenerico = '';
   $('#xAltaCuit').value = '';
   opcionesProveedor(); elegirProveedor(null);
@@ -1242,11 +1270,9 @@ function filaReparto(v) {
   div.querySelector('.rMonto').value = v.monto != null ? v.monto : '';
   if (v.leida && v.monto != null) div.querySelector('.rMonto').classList.add('campo-leido');
   div.querySelector('.rDetalle').value = v.detalle || '';
-  sel.onchange = () => {
-    const u = D.datos.unidades.find(x => String(x.id) === sel.value);
-    const km = div.querySelector('.rKm');
-    if (u && !km.value && u.km_actual) km.value = Math.round(u.km_actual);
-  };
+  const kmFila = div.querySelector('.rKm');
+  kmFila.oninput = () => delete kmFila.dataset.auto;
+  sel.onchange = () => kmSegunFecha(sel, kmFila);
   if (!v.km) sel.onchange();
   div.querySelector('.rMonto').oninput = ev => { ev.target.dataset.tocado = '1'; sumarReparto(); };
   div.querySelector('.rQuitar').onclick = () => {
@@ -1344,7 +1370,19 @@ $('#xOtraUnidad').onclick = () => {
    ===================================================================== */
 const LADO_MAXIMO = 2200;   // píxeles del lado más largo
 
+/* Una miniatura por archivo, para ver que la foto salió bien. Un clic
+   la abre entera en otra pestaña. */
+function mostrarVistas(files) {
+  (D.vistas || []).forEach(u => URL.revokeObjectURL(u));
+  D.vistas = files.map(f => URL.createObjectURL(f));
+  $('#xVistas').innerHTML = files.map((f, i) => `<a href="${D.vistas[i]}" target="_blank"
+    rel="noopener" title="${esc(f.name)}">${f.type === 'application/pdf'
+      ? `<iframe src="${D.vistas[i]}#toolbar=0&view=FitH" tabindex="-1"></iframe>`
+      : `<img src="${D.vistas[i]}" alt="${esc(f.name)}">`}</a>`).join('');
+}
+
 function limpiarLector() {
+  mostrarVistas([]);
   D.facturaArchivos = [];
   $('#xArchivo').value = '';
   $('#xArchivoNombre').textContent = '';
@@ -1390,6 +1428,7 @@ $('#xArchivo').onchange = async () => {
   if (!files.length) return limpiarLector();
   $('#avisoExterna').innerHTML = '';
   $('#xArchivoNombre').textContent = 'Preparando…';
+  mostrarVistas(files);
   try {
     D.facturaArchivos = await Promise.all(files.map(achicar));
     const peso = D.facturaArchivos.reduce((n, a) => n + a.contenido.length * 0.75, 0);
@@ -1446,7 +1485,7 @@ function volcarFactura(f) {
   poner('xFactura', f.factura);
   poner('xFecha', f.fecha);
   poner('xMonto', f.monto);
-  poner('xKm', f.km);
+  if (poner('xKm', f.km)) { delete $('#xKm').dataset.auto; $('#xKmPista').textContent = ''; }
   poner('xDetalle', f.detalle);
 
   /* La patente ya viene validada contra la flota: si el servidor no la
@@ -1485,12 +1524,13 @@ function volcarFactura(f) {
 
   const caja = document.createElement('div');
   caja.id = 'lectorDudas';
-  caja.className = 'aviso ' + (dudas.length ? 'mal' : 'bien');
+  caja.className = 'aviso ' + (dudas.length ? 'nota' : 'bien');
   caja.innerHTML = dudas.length
-    ? `<div class="lector-dudas"><b>Revisar esto antes de guardar</b><ul>${
+    ? `<div class="lector-dudas"><b>Notas de la lectura</b><ul>${
         dudas.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`
     : 'Se leyó la factura entera. Igual conviene mirar el número y el total antes de guardar.';
   $('#avisoExterna').appendChild(caja);
+  kmsSegunFecha();
 }
 $('#xGestion').onchange = () => {
   const sucursal = $('#xGestion').value === 'sucursal';
@@ -1504,10 +1544,44 @@ $('#xSolicitud').onchange = () => {
   const u = D.datos.unidades.find(x => x.patente === patente);
   if (u) { $('#xUnidad').value = String(u.id); $('#xUnidad').onchange(); }
 };
-$('#xUnidad').onchange = () => {
-  const u = D.datos.unidades.find(x => String(x.id) === $('#xUnidad').value);
-  if (u && !$('#xKm').value && u.km_actual) $('#xKm').value = Math.round(u.km_actual);
-};
+$('#xUnidad').onchange = () => kmSegunFecha($('#xUnidad'), $('#xKm'), $('#xKmPista'));
+
+/* El km del servicio es el que tenía la unidad el día de la factura. Con
+   fecha de hoy alcanza el odómetro actual; con una fecha anterior se busca
+   la lectura del satelital de ese día. Solo se completa un campo vacío o
+   uno que llenó el propio formulario: lo escrito a mano no se pisa. */
+async function kmSegunFecha(sel, campo, pista) {
+  if (campo.value && !campo.dataset.auto) return;
+  const u = (D.datos?.unidades || []).find(x => String(x.id) === sel.value);
+  const iso = $('#xFecha').value;
+  const marca = campo.dataset.pedido = String(Number(campo.dataset.pedido || 0) + 1);
+  const poner = (km, texto) => {
+    if (campo.dataset.pedido !== marca || (campo.value && !campo.dataset.auto)) return;
+    campo.value = km == null ? '' : Math.round(km);
+    if (km == null) delete campo.dataset.auto; else campo.dataset.auto = '1';
+    if (pista) pista.textContent = km == null ? '' : texto;
+  };
+  if (!u) return poner(null);
+  if (!iso || iso >= hoy()) return poner(u.km_actual || null, u.km_actual ? 'Odómetro actual.' : '');
+  try {
+    const r = await fetch(`/api/odometro?patente=${encodeURIComponent(u.patente)}&fecha=${iso}`);
+    const d = r.ok ? await r.json() : {};
+    if (d.km == null) return poner(u.km_actual || null, 'Sin lectura para esa fecha: odómetro actual.');
+    const dias = Number(d.desvio) || 0;
+    poner(d.km, `Satelital del ${fecha(d.fecha)}` +
+      (dias ? ` (${Math.abs(dias)} día${Math.abs(dias) === 1 ? '' : 's'} ${dias < 0 ? 'antes' : 'después'} de la factura).` : '.'));
+  } catch (e) { void e; }
+}
+function kmsSegunFecha() {
+  if (repartoActivo())
+    document.querySelectorAll('#repartoFilas .reparto-fila').forEach(f =>
+      kmSegunFecha(f.querySelector('.rUnidad'), f.querySelector('.rKm')));
+  else kmSegunFecha($('#xUnidad'), $('#xKm'), $('#xKmPista'));
+}
+$('#xFecha').addEventListener('change', kmsSegunFecha);
+$('#xKm').addEventListener('input', () => {
+  delete $('#xKm').dataset.auto; $('#xKmPista').textContent = '';
+});
 $('#guardarExterna').onclick = () => {
   $('#avisoExterna').innerHTML = '';
   const nombre = $('#xTaller').value.trim();
@@ -1516,6 +1590,7 @@ $('#guardarExterna').onclick = () => {
     $('#avisoExterna').innerHTML = '<div class="aviso mal">Falta definir el proveedor: alta o genérico.</div>';
     return;
   }
+  if ($('#xMantenimiento').value === 'preventivo' && !confirmarService()) return;
   guardarExterna();
 };
 $('#xAltaNo').onclick = () => {
@@ -1557,6 +1632,22 @@ $('#xAltaSi').onclick = async () => {
     $('#xAltaSi').disabled = false;
   }
 };
+/* Un preventivo cambia el último service de cada unidad: se muestra con
+   qué fecha y qué km antes de guardar. */
+function confirmarService() {
+  const unidades = repartoActivo() ? filasReparto()
+    : [{unidad_id: Number($('#xUnidad').value) || null, km: $('#xKm').value}];
+  const renglones = unidades.map(x => {
+    const u = (D.datos?.unidades || []).find(y => String(y.id) === String(x.unidad_id));
+    return `· ${u ? pat(u.patente) : 'Unidad sin elegir'}: ${
+      x.km ? nfm.format(Number(x.km)) + ' km' : 'sin km'}`;
+  });
+  return confirm(`Servicio preventivo: se actualiza el service de ${
+    unidades.length === 1 ? 'la unidad' : 'las unidades'} con fecha ${
+    fecha($('#xFecha').value)}.\n\n${renglones.join('\n')}\n\n` +
+    'El próximo service se calcula desde este registro. ¿Confirmar?');
+}
+
 async function guardarExterna() {
   $('#guardarExterna').disabled = true;
   try {

@@ -87,12 +87,13 @@ def _resumir_km(filas, hoy):
 def _kilometros(cx):
     from datetime import datetime, timedelta
     from zoneinfo import ZoneInfo
+    import satelitales
     hoy = datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")).date()
     try:
-        filas = cx.execute("""
+        filas = cx.execute(f"""
             select distinct on (unidad_id, fecha) unidad_id, fecha, km
             from odometros
-            where unidad_id is not null and fuente = 'hawk'
+            where unidad_id is not null and fuente in {satelitales.en_sql()}
               and fecha >= %s and fecha < %s
             order by unidad_id, fecha, leido desc, id desc
         """, (hoy - timedelta(days=61), hoy)).fetchall()
