@@ -536,7 +536,7 @@ async function selectUnit(pat){D.selected=pat;D.benchToken=(D.benchToken||0)+1;c
      según por dónde se hubiera entrado. */
   if(!d.mapa.length)no=`<div class="card section"><h3>Sin mapa de cubiertas</h3><p class="workbench-help">Esta unidad no tiene mapa asignado, así que no hay dónde montar una cubierta. El mapa se asigna en la ficha de la unidad, en <b>Flota</b>, en el campo «Mapa de cubiertas».</p>${D.user?.puede_administrar?`<div class="actions"><a class="btn" href="/unidades?patente=${encodeURIComponent(u.patente)}">Abrir la ficha en Flota</a></div>`:''}</div>`;
   /* Con modelo, el camión; sin modelo, la grilla de toda la vida. */
-  const con3d=d.modelo_3d&&d.mapa.length&&typeof THREE!=='undefined';
+  const con3d=d.modelo_3d&&d.mapa.length&&typeof THREE!=='undefined'&&webglDisponible();
   const dibujo=(con3d?`<div class="workbench-controls"><label><input id="moveWheels" type="checkbox">Mover cubiertas desde el 3D</label><span>Desactivado: arrastrá para girar.</span></div>`+visorHtml()+'<div class="wheel-legend"><span><i style="background:#2b5a76"></i>Completa</span><span><i style="background:#36abc7"></i>Dual: una montada</span><span><i style="background:#6d3a34"></i>Sin cubiertas</span><span><i style="background:var(--rueda)"></i>Rueda elegida</span><span><i style="background:var(--goma)"></i>Cubierta elegida</span></div><div class="elegida" id="elegida"></div>':'')+(d.mapa.length?'<h3>Posiciones · montaje y retiro</h3>'+mapHtml(d.mapa):'');
   $('#unitDetail').innerHTML=`<div class="card"><div class="hero"><div><h2>${esc(fmtPat(u.patente))}</h2><div class="meta">${[u.interno&&'Interno '+u.interno,u.marca,u.modelo,u.sucursal,u.uso].filter(Boolean).map(esc).join(' · ')}</div></div><span class="pill">${d.mapa.filter(x=>x.cubierta_id).length}/${d.mapa.length} posiciones ocupadas</span></div>${dibujo}</div>${no}${puestasHtml(d.mapa)}<div class="card section"><h3>Historial de cambios de la unidad <button class="verdeshechos" id="verDeshechos" hidden></button></h3><div id="histBody"></div></div>`;
   engancharCubiertas();
@@ -649,7 +649,7 @@ let b=$('#interpret');b.disabled=true;out.innerHTML='<div class="result"><span c
    circuito en que el dato se tiene antes que el papel, así que el papel
    lo hace el sistema y no hay nada que volver a cargar.
    ===================================================================== */
-let REC = { elegidas: new Set(), recibiendo: null, cruce: null };
+let REC = { elegidas: new Set(), devolver: new Set(), recibiendo: null, cruce: null };
 
 /* Los archivos del <input type=file> en base64, como los quiere la API.
    Las fotos se achican antes: una foto de celular sin achicar son 8 MB y
@@ -708,19 +708,20 @@ function facturaHtml(d, gestor){
 /* El cuadro del cruce. Las tres listas, y la del medio es la que no
    existía: lo que salió y la factura no trae. */
 function cruceHtml(c){
-  const fila = x => `<tr><td class="fuerte">${esc(x.codigo)}</td><td>${esc(x.envio_id||'—')}</td><td class="num">${x.costo!=null?nfmt(x.costo):'—'}</td><td>${esc(x.banda||'—')}</td></tr>`;
+  const TRABAJO = {recapado:'Recapado', reparacion:'Reparación', otro:'Otro'};
+  const fila = x => `<tr><td class="fuerte">${esc(x.codigo)}</td><td>${esc(x.marca||'—')}</td><td>${esc(TRABAJO[x.trabajo]||'Recapado')}${x.trabajo==='reparacion'?'<div class="note">vuelve sin recapar</div>':''}</td><td>${esc(x.envio_id||'—')}</td><td class="num">${x.costo!=null?nfmt(x.costo):'—'}</td><td>${esc(x.banda||'—')}</td></tr>`;
   let h = `<div class="section"><p class="sub">Factura ${esc(c.factura||'sin número')}${c.fecha?' · '+esc(c.fecha):''}</p>`;
-  if(c.dudas.length) h += `<div class="result error"><b>Lo que no se leyó con seguridad</b><ul>${c.dudas.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`;
-  h += `<h3>Vuelven · ${c.vuelven.length}</h3>`;
+  if(c.dudas.length) h += `<div class="result"><b>Notas de la lectura</b><ul>${c.dudas.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`;
+  h += `<h3 style="margin-top:14px">Vuelven · ${c.vuelven.length}</h3>`;
   h += c.vuelven.length
-    ? `<div class="tablewrap"><table class="datos"><thead><tr><th>Código</th><th>Remito</th><th class="num">Costo</th><th>Banda</th></tr></thead><tbody>${c.vuelven.map(fila).join('')}</tbody></table></div>`
+    ? `<div class="tablewrap"><table class="datos"><thead><tr><th>Fuego</th><th>Marca</th><th>Trabajo</th><th>Remito</th><th class="num">Costo</th><th>Banda</th></tr></thead><tbody>${c.vuelven.map(fila).join('')}</tbody></table></div>`
     : '<div class="emptymsg">Ninguna de la factura está afuera.</div>';
   if(c.faltan.length) h += `<h3 style="margin-top:14px">No volvieron · ${c.faltan.length}</h3>
     <p class="sub">Salieron y la factura no las trae. Siguen figurando afuera.</p>
     <div class="tablewrap"><table class="datos"><thead><tr><th>Código</th><th>Remito</th><th class="num">Días</th></tr></thead><tbody>${c.faltan.map(x=>`<tr><td class="fuerte">${esc(x.codigo)}</td><td>${esc(x.envio_id)}</td><td class="num">${x.dias_afuera}</td></tr>`).join('')}</tbody></table></div>`;
   if(c.desconocidas.length) h += `<h3 style="margin-top:14px">No salieron de acá · ${c.desconocidas.length}</h3>
     <p class="sub">Están en la factura pero no en ningún remito abierto. Puede ser un número mal leído o una goma que entró por otro lado.</p>
-    <ul>${c.desconocidas.map(x=>`<li>${esc(x.codigo_fuego||'(sin número)')}${x.repetida?' — repetida en la factura':''}</li>`).join('')}</ul>`;
+    <div class="tablewrap"><table class="datos"><thead><tr><th>Fuego</th><th>Marca</th><th>Detalle</th><th class="num">Costo</th><th>En el sistema</th></tr></thead><tbody>${c.desconocidas.map(x=>`<tr><td class="fuerte">${esc(x.codigo_fuego||'sin número')}</td><td>${esc(x.marca||'—')}</td><td>${esc(x.detalle||'—')}${x.repetida?'<div class="note">repetida en la factura</div>':''}</td><td class="num">${x.costo!=null?nfmt(x.costo):'—'}</td><td>${x.en_sistema?esc(x.en_sistema.codigo)+' · '+esc(labs[x.en_sistema.estado]||x.en_sistema.estado):'—'}</td></tr>`).join('')}</tbody></table></div>`;
   h += `<div class="actions" style="margin-top:14px">${c.vuelven.length?'<button class="btn" id="recFcGuardar">Registrar las '+c.vuelven.length+' que vuelven</button>':''}<button class="btn alt" id="recFcCancelar">Descartar</button></div></div>`;
   return h;
 }
@@ -731,10 +732,12 @@ function afueraHtml(d){
   const a = d.afuera || [];
   if(!a.length) return `<div class="card section"><h3>Qué hay afuera</h3><div class="emptymsg">No hay cubiertas en lo del recapador.</div></div>`;
   const viejas = a.filter(x => x.dias_afuera > 21).length;
+  const gestor = d.puede_gestionar, n = REC.devolver.size;
   return `<div class="card section"><h3>Qué hay afuera · ${a.length} cubierta${a.length===1?'':'s'}</h3>
     ${viejas?`<p class="sub">${viejas} llevan más de tres semanas afuera.</p>`:''}
-    <div class="tablewrap"><table class="datos"><thead><tr><th>Código</th><th>Marca</th><th>Medida</th><th>Remito</th><th>Recapador</th><th class="num">Días</th></tr></thead><tbody>
-    ${a.map(x=>`<tr><td class="fuerte">${esc(x.codigo)}${x.codigo_provisorio?'<span class="sinfuego">sin fuego</span>':''}</td><td>${esc(x.marca||'—')}</td><td>${esc(x.medida||'—')}</td><td>${esc(x.envio_id)}</td><td>${esc(x.recapador)}</td><td class="num ${x.dias_afuera>21?'pending':''}">${x.dias_afuera}</td></tr>`).join('')}
+    ${gestor?`<div class="actions" style="margin-bottom:8px"><button class="btn alt" id="recDevolver"${n?'':' disabled'}>Registrar vuelta sin factura${n?' · '+n:''}</button></div>`:''}
+    <div class="tablewrap"><table class="datos"><thead><tr>${gestor?'<th></th>':''}<th>Código</th><th>Marca</th><th>Medida</th><th>Remito</th><th>Recapador</th><th class="num">Días</th></tr></thead><tbody>
+    ${a.map(x=>`<tr>${gestor?`<td><input type="checkbox" data-rec-dev="${x.cubierta_id}"${REC.devolver.has(x.cubierta_id)?' checked':''}></td>`:''}<td class="fuerte">${esc(x.codigo)}${x.codigo_provisorio?'<span class="sinfuego">sin fuego</span>':''}</td><td>${esc(x.marca||'—')}</td><td>${esc(x.medida||'—')}</td><td>${esc(x.envio_id)}</td><td>${esc(x.recapador)}</td><td class="num ${x.dias_afuera>21?'pending':''}">${x.dias_afuera}</td></tr>`).join('')}
     </tbody></table></div></div>`;
 }
 
@@ -781,6 +784,12 @@ function engancharRec(gestor){
     imprimirRemito(d);
   });
   $$('[data-rec-recibir]').forEach(x=>x.onclick=()=>abrirRecibir(x.dataset.recRecibir));
+  $$('[data-rec-dev]').forEach(x=>x.onchange=()=>{
+    const id=+x.dataset.recDev;
+    x.checked?REC.devolver.add(id):REC.devolver.delete(id);
+    pintarRec();
+  });
+  if($('#recDevolver'))$('#recDevolver').onclick=abrirDevolver;
   if($('#recFcLeer'))$('#recFcLeer').onclick=leerFacturaRecapado;
   if(REC.cruce && $('#recFcSalida')){ $('#recFcSalida').innerHTML=cruceHtml(REC.cruce); engancharCruce(); }
 }
@@ -804,8 +813,13 @@ function engancharCruce(){
     /* Cada envío se registra por separado: una factura puede traer gomas
        de dos remitos distintos. */
     const porEnvio={};
+    /* Una reparación (hombro, vulcanizado) vuelve sin banda nueva: va al
+       depósito como salió, con lo que costó. */
     c.vuelven.forEach(x=>{(porEnvio[x.envio_id]=porEnvio[x.envio_id]||[]).push(
-      {cubierta_id:x.cubierta_id, costo:x.costo, banda:x.banda})});
+      x.trabajo==='reparacion'
+        ? {cubierta_id:x.cubierta_id, costo:x.costo, sin_recapar:true,
+           motivo:'Reparación'+(x.detalle?': '+x.detalle:'')+(c.factura?' · factura '+c.factura:'')}
+        : {cubierta_id:x.cubierta_id, costo:x.costo, banda:x.banda})});
     const b=$('#recFcGuardar'); b.disabled=true;
     try{
       for(const [envio, vueltas] of Object.entries(porEnvio))
@@ -848,6 +862,45 @@ function imprimirRemito(d){
   </body></html>`);
   w.document.close();
   w.focus(); w.print();
+}
+
+/* La vuelta sin factura: una prueba, una goma que el recapador devolvió
+   sin tocar o un cambio de estado. Pide el motivo, que queda en el
+   historial de cada cubierta. */
+function abrirDevolver(){
+  const elegidas = (D.rec.afuera||[]).filter(x=>REC.devolver.has(x.cubierta_id));
+  if(!elegidas.length) return;
+  $('#recModalTitle').textContent = 'Vuelta sin factura';
+  $('#recModalBody').innerHTML = `<p class="sub">${elegidas.map(x=>esc(x.codigo)).join(', ')}</p>
+    <label>Cómo vuelve</label>
+    <select id="devComo">
+      <option value="sin_recapar">Sin recapar: al depósito como salió</option>
+      <option value="recapada">Recapada: queda como recapada, con vida nueva</option>
+      <option value="rechazada">Rechazada: se da de baja</option>
+    </select>
+    <label>Motivo</label>
+    <textarea id="devMotivo" rows="3" placeholder="Prueba de carga, devuelta sin trabajo, cambio de estado…"></textarea>
+    <div id="recError"></div>`;
+  $('#recGuardar').textContent = 'Registrar la vuelta';
+  modal('recModal');
+  $('#recGuardar').onclick = async () => {
+    const motivo = $('#devMotivo').value.trim();
+    if(!motivo) return $('#recError').innerHTML='<p class="error">Falta el motivo.</p>';
+    const como = $('#devComo').value;
+    if(como==='rechazada' && !confirm(`Se dan de baja ${elegidas.length} cubierta${elegidas.length===1?'':'s'}. ¿Confirmar?`)) return;
+    const porEnvio = {};
+    elegidas.forEach(x=>(porEnvio[x.envio_id]=porEnvio[x.envio_id]||[]).push({
+      cubierta_id:x.cubierta_id, motivo,
+      sin_recapar: como==='sin_recapar', rechazada: como==='rechazada'}));
+    const b=$('#recGuardar'); b.disabled=true;
+    try{
+      for(const [envio, vueltas] of Object.entries(porEnvio))
+        await api('/api/recapado',{op:'recibir', envio_id:envio, vueltas});
+      REC.devolver.clear(); modal('recModal', false);
+      await loadRec(); await loadStock();
+    }catch(e){ $('#recError').innerHTML=`<p class="error">${esc(e.message)}</p>`; }
+    finally{ b.disabled=false; }
+  };
 }
 
 /* Recibir: se marca lo que volvió, con su costo. Lo que no se marca sigue

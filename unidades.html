@@ -1098,6 +1098,8 @@ async function pintarEstado(id){
         `Se puede forzar uno desde el campo <b>Modelo 3D</b>.`);
   } else if (typeof THREE === 'undefined'){
     visorVacio('No cargó la librería 3D.');
+  } else if (!webglDisponible()){
+    visorVacio('El navegador no puede mostrar el modelo 3D (WebGL no disponible).');
   } else {
     armarVisor(d.modelo_3d, d.modelo_3d_archivo,
       { por:d.modelo_3d_por, version:d.modelo_3d_version, mapa:d.mapa });

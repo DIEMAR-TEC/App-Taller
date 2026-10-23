@@ -214,6 +214,24 @@ class Recibir(unittest.TestCase):
         puesta = cx.hizo("update recapado_envios set factura")
         self.assertEqual(puesta[0][1][0], "0001-00001234")
 
+    def test_sin_recapar_vuelve_al_stock_con_su_motivo(self):
+        """Vuelve sin banda nueva: no abre vida, va al depósito como salió."""
+        cx = Base(pendientes=1)
+        with patch.object(recapado.desgaste, "recapar") as rec, \
+             patch.object(recapado.base, "_log") as log:
+            recapado.recibir(cx, {"envio_id": "REC-00007", "vueltas": [
+                {"cubierta_id": 1, "sin_recapar": True, "motivo": "Prueba"}
+            ]}, GESTOR)
+        rec.assert_not_called()
+        self.assertTrue(cx.hizo("update cubiertas set estado = 'stock'"))
+        self.assertIn("Prueba", log.call_args.kwargs["nota"])
+        renglon = cx.hizo("update recapado_renglones set estado = 'volvio'")
+        self.assertIn("Sin recapar · Prueba", renglon[0][1][0])
+
+    def test_sin_recapar_pide_el_motivo(self):
+        with self.assertRaisesRegex(ValueError, "por qué"):
+            self.recibir(vueltas=[{"cubierta_id": 1, "sin_recapar": True}])
+
     def test_una_cubierta_ajena_al_envio_se_rechaza(self):
         with self.assertRaisesRegex(ValueError, "no está pendiente"):
             self.recibir(vueltas=[{"cubierta_id": 99}])
