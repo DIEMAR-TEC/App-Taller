@@ -414,6 +414,20 @@ function apagarVisor(){
                      medida:null, tocado:false });
 }
 
+/* Si el navegador puede dibujar en 3D. Sin aceleración gráfica (o con el
+   límite de contextos agotado) el WebGL no arranca y el visor no se arma:
+   queda la grilla de posiciones. El contexto de prueba se suelta enseguida. */
+function webglDisponible(){
+  try {
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl2') || c.getContext('webgl');
+    if (!gl) return false;
+    const ext = gl.getExtension('WEBGL_lose_context');
+    if (ext) ext.loseContext();
+    return true;
+  } catch (e) { return false; }
+}
+
 function visorVacio(texto){
   apagarVisor();
   nodo('#visor-vacio').hidden = false;
@@ -446,7 +460,12 @@ function armarVisor(clave, archivo, opciones){
   const cam = new THREE.PerspectiveCamera(38, caja.clientWidth / caja.clientHeight, .1, 200);
   cam.position.set(7.5, 3.4, 7.5);
 
-  const ren = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  let ren;
+  try { ren = new THREE.WebGLRenderer({ antialias:true, alpha:true }); }
+  catch (e) {
+    visorVacio('El navegador no puede mostrar el modelo 3D (WebGL no disponible).');
+    return;
+  }
   ren.setPixelRatio(Math.min(devicePixelRatio, 2));
   ren.setSize(caja.clientWidth, caja.clientHeight);
   caja.appendChild(ren.domElement);
