@@ -7,6 +7,7 @@ la que falla frene a las otras.
 """
 import json
 import os
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -200,6 +201,59 @@ class Cuentas(unittest.TestCase):
             for r in c.get("respaldo") or []:
                 self.assertIn(r["proveedor"] if isinstance(r, dict) else r, sat.PROVEEDORES)
             self.assertTrue(c.get("credenciales"))
+
+
+class ElWorkflow(unittest.TestCase):
+    """Que el workflow pase los secrets que cuentas.json nombra, uno por uno.
+
+    Pasaban todos juntos, con toJSON(secrets). GitHub lee ese volcado como
+    una fuga de secretos: marca el workflow como posiblemente malicioso y lo
+    deja esperando que alguien lo apruebe a mano. Del 24 al 26/10/2026 no
+    entró un solo odómetro y nada lo avisó, porque el job nunca arrancó y el
+    mail de error sale adentro del job.
+
+    Nombrados, el riesgo se da vuelta: sumar una empresa a cuentas.json y
+    olvidarse de su secret acá tampoco avisa hasta la madrugada siguiente.
+    De eso se encarga la primera prueba.
+    """
+
+    def workflows(self):
+        carpeta = RAIZ / ".github" / "workflows"
+        archivos = sorted(carpeta.glob("*.yml")) + sorted(carpeta.glob("*.yaml"))
+        self.assertTrue(archivos, "no se encontró ningún workflow")
+        return [(a.name, a.read_text(encoding="utf-8")) for a in archivos]
+
+    def test_el_workflow_nombra_todos_los_secrets_de_las_cuentas(self):
+        texto = (RAIZ / ".github" / "workflows" / "odometros.yml").read_text(encoding="utf-8")
+        pasados = set(re.findall(r"^\s*([A-Z0-9_]+):\s*\$\{\{\s*secrets\.", texto, re.M))
+
+        hacen_falta = set()
+        def anotar(cuenta):
+            hacen_falta.update((cuenta.get("credenciales") or {}).values())
+            for r in cuenta.get("respaldo") or []:
+                if isinstance(r, dict):
+                    anotar(r)
+        for c in sat.cuentas(solo_activas=False):
+            anotar(c)
+
+        self.assertTrue(hacen_falta, "cuentas.json no nombra ningún secret")
+        self.assertEqual(hacen_falta - pasados, set(),
+                         "el workflow no le pasa estos secrets a leer_km.py: "
+                         "la cuenta que los usa se queda sin leer.")
+
+    def test_ningun_workflow_vuelca_todos_los_secrets(self):
+        """Los comentarios no cuentan: el de odometros.yml cuenta justamente
+        esta historia y nombra el volcado para que no se repita."""
+        for nombre, texto in self.workflows():
+            sin_comentarios = "\n".join(l for l in texto.splitlines()
+                                        if not l.lstrip().startswith("#"))
+            with self.subTest(workflow=nombre):
+                self.assertFalse(
+                    re.search(r"toJSON\(\s*secrets\s*\)", sin_comentarios),
+                    f"{nombre} vuelca todos los secrets del repo en una "
+                    "variable. GitHub lo lee como una fuga, bloquea el "
+                    "workflow y las corridas quedan esperando que alguien "
+                    "las apruebe a mano: nombrá cada secret.")
 
 
 class Conexiones(unittest.TestCase):

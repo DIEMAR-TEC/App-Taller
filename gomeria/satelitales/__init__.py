@@ -79,9 +79,14 @@ def cuentas(ruta=None, solo_activas=True):
 def secreto(nombre):
     """El valor de un secret por su nombre.
 
-    Primero la variable de entorno; si no está, el JSON de SECRETOS, que es
-    como el workflow pasa todos los secrets del repo de una vez. Así agregar
-    un cliente no obliga a tocar el workflow.
+    Primero la variable de entorno, que es como los pasa el workflow: uno
+    por uno, con su nombre. Si no está, el JSON de SECRETOS, {"NOMBRE":
+    "valor"}, que sirve para correr esto a mano sin exportar cuatro
+    variables.
+
+    El workflow pasó un tiempo volcando todos los secrets del repo acá con
+    toJSON(secrets). GitHub lo lee como una fuga y bloquea el workflow, así
+    que cada secret va nombrado.
     """
     valor = os.environ.get(nombre)
     if valor is None:
