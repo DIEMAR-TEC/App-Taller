@@ -2,12 +2,10 @@ package com.titanflota.handheld;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -15,7 +13,6 @@ import android.os.Bundle;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
-import android.text.InputType;
 import android.view.KeyEvent;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
@@ -26,7 +23,6 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.EditText;
 
 import org.json.JSONObject;
 
@@ -42,11 +38,13 @@ import java.util.ArrayList;
  *   - recibir el código del lector cuando la terminal lo manda por aviso
  *     del sistema (broadcast) en lugar de escribirlo como teclado;
  *   - dar permiso de cámara a la página;
- *   - recordar la dirección del servidor.
+ *
+ * La dirección del servidor es fija: la terminal la usan los empleados y
+ * no tienen que poder cambiarla.
  */
 public class MainActivity extends Activity {
 
-    static final String SERVIDOR_PREDETERMINADO = "https://app-taller-cu5d.onrender.com";
+    static final String SERVIDOR = "https://app.titanfleetmanagement.com";
     static final String PANTALLA = "/handheld";
     static final int PEDIDO_CAMARA = 1;
     static final int PEDIDO_MICROFONO = 2;
@@ -107,12 +105,8 @@ public class MainActivity extends Activity {
         return null;
     }
 
-    SharedPreferences prefs() {
-        return getSharedPreferences("titan", MODE_PRIVATE);
-    }
-
     String servidor() {
-        return prefs().getString("servidor", SERVIDOR_PREDETERMINADO);
+        return SERVIDOR;
     }
 
     @Override
@@ -298,36 +292,8 @@ public class MainActivity extends Activity {
         @Override public void onEvent(int t, Bundle p) { }
     }
 
-    /** Pedir la dirección del servidor y guardarla. */
-    void cambiarServidor() {
-        final EditText campo = new EditText(this);
-        campo.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-        campo.setText(servidor());
-        new AlertDialog.Builder(this)
-            .setTitle("Dirección del servidor")
-            .setView(campo)
-            .setPositiveButton("Guardar", (d, w) -> {
-                String valor = campo.getText().toString().trim();
-                while (valor.endsWith("/")) valor = valor.substring(0, valor.length() - 1);
-                if (!valor.startsWith("http")) valor = "https://" + valor;
-                prefs().edit().putString("servidor", valor).apply();
-                web.loadUrl(valor + PANTALLA);
-            })
-            .setNeutralButton("Predeterminado", (d, w) -> {
-                prefs().edit().remove("servidor").apply();
-                web.loadUrl(SERVIDOR_PREDETERMINADO + PANTALLA);
-            })
-            .setNegativeButton("Cancelar", null)
-            .show();
-    }
-
     /** Lo que la página puede pedirle a la app. */
     class Puente {
-        @JavascriptInterface
-        public void cambiarServidor() {
-            runOnUiThread(MainActivity.this::cambiarServidor);
-        }
-
         @JavascriptInterface
         public void dictar() {
             runOnUiThread(MainActivity.this::dictar);
@@ -335,7 +301,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String version() {
-            return "1.1";
+            return "1.2";
         }
     }
 
@@ -360,9 +326,8 @@ public class MainActivity extends Activity {
                 + "button{display:block;width:100%;margin-top:14px;padding:16px;font-size:17px;"
                 + "font-weight:bold;border:0;border-radius:10px;background:#2563eb;color:#fff}"
                 + "button.alt{background:#e9eef4;color:#14243a}</style></head><body>"
-                + "<h2>Sin conexión con el servidor</h2><p>" + servidor() + "</p>"
+                + "<h2>Sin conexión con el servidor</h2><p>Revisar el wifi o los datos.</p>"
                 + "<button onclick=\"location.href='" + servidor() + PANTALLA + "'\">Reintentar</button>"
-                + "<button class='alt' onclick='TitanApp.cambiarServidor()'>Cambiar servidor</button>"
                 + "</body></html>";
             vista.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
         }

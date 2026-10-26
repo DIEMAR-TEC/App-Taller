@@ -182,8 +182,6 @@ table.t .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums
       <span><b>Registrar trabajo de gomería</b><span>Escrito o dictado; el sistema lo interpreta y se confirma.</span></span>
     </button>
   </div>
-  <button class="btn alt" id="servidor" hidden>Dirección del servidor</button>
-  <a class="btn alt" href="/handheld/qr" style="text-align:center;text-decoration:none">QR para imprimir</a>
 </section>
 
 <!-- ------------------------------------------------------ baja de repuestos -->
@@ -1041,11 +1039,6 @@ $('#t-dictar').onclick = () => {
 };
 
 /* ------------------------------------------------------------------ inicio */
-/* Dentro de la APK, la dirección del servidor se cambia desde acá. */
-if (window.TitanApp) {
-  $('#servidor').hidden = false;
-  $('#servidor').onclick = () => TitanApp.cambiarServidor();
-}
 fetch('/api/yo').then(r => r.ok ? r.json() : null).then(d => {
   if (!d) return;
   YO = d;
