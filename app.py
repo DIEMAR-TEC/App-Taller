@@ -70,6 +70,16 @@ import viento_indicadores
 import servidor as gom
 from flota_vales.http import atender as atender_vales
 
+# ENTORNO=pruebas solo en el servicio de la rama DEMO-Y-PRUEBAS, que corre
+# contra la base de pruebas. El real no la tiene y no muestra nada.
+ES_PRUEBAS = os.environ.get("ENTORNO", "").strip().lower() == "pruebas"
+AVISO_PRUEBAS = (
+    '<div id="aviso-pruebas" style="position:fixed;bottom:12px;right:12px;'
+    'z-index:99999;background:#D97706;color:#fff;font:700 12px/1 system-ui,'
+    'sans-serif;letter-spacing:.08em;padding:7px 12px;border-radius:6px;'
+    'box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none">'
+    'PRUEBAS · BASE DE PRUEBA</div>')
+
 # Cada dirección con el archivo que le toca. Todas piden sesión.
 PANTALLAS = {
     "/gomeria-mesa.js": ("gomeria/mesa.js", "text/javascript; charset=utf-8"),
@@ -282,6 +292,15 @@ class App(CupoPorPedido, gom.Handler):
         return False
 
     def _responder(self, cuerpo, tipo="application/json; charset=utf-8", codigo=200, cookie=None):
+        # El servicio de pruebas (ENTORNO=pruebas en Render) marca todas las
+        # pantallas, el login incluido, para no confundirlo con el real.
+        if tipo.startswith("text/html") and ES_PRUEBAS:
+            html = cuerpo.decode("utf-8") if isinstance(cuerpo, bytes) else cuerpo
+            if 'id="aviso-pruebas"' not in html:
+                cabeza = re.search(r"<body[^>]*>", html)
+                if cabeza:
+                    html = html[:cabeza.end()] + AVISO_PRUEBAS + html[cabeza.end():]
+            cuerpo = html
         # Incluye las pantallas servidas por el manejador de Gomería.
         if tipo.startswith("text/html") and getattr(self, "usuario", None):
             html = cuerpo.decode("utf-8") if isinstance(cuerpo, bytes) else cuerpo
