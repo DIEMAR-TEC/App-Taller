@@ -19,7 +19,7 @@ import permisos
 # Las pantallas del teléfono no la llevan: el QR de la goma se escanea
 # parado al lado de la unidad y ahí el ancho es todo. La portada tampoco,
 # que ya trae la suya.
-SIN_BARRA = ("/", "/movil", "/handheld")
+SIN_BARRA = ("/", "/movil", "/handheld", "/handheld/qr")
 SIN_BARRA_PREFIJO = ("/u/",)
 
 MODULOS = [

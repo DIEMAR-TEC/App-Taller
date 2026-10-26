@@ -12,6 +12,9 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.text.InputType;
 import android.view.KeyEvent;
 import android.webkit.CookieManager;
@@ -26,6 +29,8 @@ import android.webkit.WebViewClient;
 import android.widget.EditText;
 
 import org.json.JSONObject;
+
+import java.util.ArrayList;
 
 /**
  * La app de la terminal con lector: una ventana web que abre /handheld del
@@ -44,6 +49,9 @@ public class MainActivity extends Activity {
     static final String SERVIDOR_PREDETERMINADO = "https://app-taller-cu5d.onrender.com";
     static final String PANTALLA = "/handheld";
     static final int PEDIDO_CAMARA = 1;
+    static final int PEDIDO_MICROFONO = 2;
+    static final int DICTADO_SISTEMA = 3;
+    static final String ACCION_LECTOR = "com.titanflota.handheld.SCAN";
 
     /*
      * Los avisos que mandan los lectores de las marcas más comunes. Cada
@@ -52,7 +60,7 @@ public class MainActivity extends Activity {
      * que no necesita nada de esto.
      */
     static final String[] ACCIONES = {
-        "com.titanflota.handheld.SCAN",            // Zebra DataWedge / configurable
+        ACCION_LECTOR,                             // Zebra: perfil que crea configurarDataWedge
         "com.symbol.datawedge.api.RESULT_ACTION",
         "com.honeywell.decode.intent.action.EDIT_DATA",
         "com.honeywell.scan.broadcast",
@@ -75,6 +83,7 @@ public class MainActivity extends Activity {
 
     WebView web;
     PermissionRequest camaraPendiente;
+    SpeechRecognizer reconocedor;
 
     final BroadcastReceiver lector = new BroadcastReceiver() {
         @Override
@@ -126,6 +135,8 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new Cliente());
         web.setWebChromeClient(new Cromo());
 
+        configurarDataWedge();
+
         if (guardado != null) web.restoreState(guardado);
         else web.loadUrl(servidor() + PANTALLA);
     }
@@ -164,6 +175,129 @@ public class MainActivity extends Activity {
         return super.onKeyDown(tecla, evento);
     }
 
+    /**
+     * En las Zebra, un perfil de DataWedge para esta app: el lector manda el
+     * código por broadcast a ACCION_LECTOR y no como teclado. Así no depende
+     * de que el perfil general tenga el Enter activado. En equipos sin
+     * DataWedge el aviso no lo recibe nadie y no pasa nada.
+     */
+    void configurarDataWedge() {
+        Bundle perfil = new Bundle();
+        perfil.putString("PROFILE_NAME", "TitanHandheld");
+        perfil.putString("PROFILE_ENABLED", "true");
+        perfil.putString("CONFIG_MODE", "CREATE_IF_NOT_EXIST");
+
+        Bundle app = new Bundle();
+        app.putString("PACKAGE_NAME", getPackageName());
+        app.putStringArray("ACTIVITY_LIST", new String[]{"*"});
+        perfil.putParcelableArray("APP_LIST", new Bundle[]{app});
+
+        Bundle lectorParams = new Bundle();
+        lectorParams.putString("scanner_selection", "auto");
+        lectorParams.putString("scanner_input_enabled", "true");
+        Bundle lector = new Bundle();
+        lector.putString("PLUGIN_NAME", "BARCODE");
+        lector.putString("RESET_CONFIG", "true");
+        lector.putBundle("PARAM_LIST", lectorParams);
+
+        Bundle intentParams = new Bundle();
+        intentParams.putString("intent_output_enabled", "true");
+        intentParams.putString("intent_action", ACCION_LECTOR);
+        intentParams.putString("intent_delivery", "2");
+        Bundle salida = new Bundle();
+        salida.putString("PLUGIN_NAME", "INTENT");
+        salida.putString("RESET_CONFIG", "true");
+        salida.putBundle("PARAM_LIST", intentParams);
+
+        Bundle tecladoParams = new Bundle();
+        tecladoParams.putString("keystroke_output_enabled", "false");
+        Bundle teclado = new Bundle();
+        teclado.putString("PLUGIN_NAME", "KEYSTROKE");
+        teclado.putString("RESET_CONFIG", "true");
+        teclado.putBundle("PARAM_LIST", tecladoParams);
+
+        perfil.putParcelableArrayList("PLUGIN_CONFIG",
+                new ArrayList<>(java.util.Arrays.asList(lector, salida, teclado)));
+
+        Intent pedido = new Intent("com.symbol.datawedge.api.ACTION");
+        pedido.putExtra("com.symbol.datawedge.api.SET_CONFIG", perfil);
+        sendBroadcast(pedido);
+    }
+
+    void js(String codigo) {
+        runOnUiThread(() -> web.evaluateJavascript(codigo, null));
+    }
+
+    void dictadoError(String mensaje) {
+        js("window.alDictarError && window.alDictarError(" + JSONObject.quote(mensaje) + ")");
+    }
+
+    void dictadoListo(String texto) {
+        js("window.alDictar && window.alDictar(" + JSONObject.quote(texto) + ")");
+    }
+
+    /** Escuchar y devolver el texto a la página. */
+    void dictar() {
+        if (Build.VERSION.SDK_INT >= 23
+                && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, PEDIDO_MICROFONO);
+            return;
+        }
+        Intent pedido = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        pedido.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        pedido.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-AR");
+        pedido.putExtra(RecognizerIntent.EXTRA_PROMPT, "Trabajo realizado");
+
+        if (SpeechRecognizer.isRecognitionAvailable(this)) {
+            if (reconocedor == null) reconocedor = SpeechRecognizer.createSpeechRecognizer(this);
+            reconocedor.setRecognitionListener(new Oyente());
+            reconocedor.startListening(pedido);
+            return;
+        }
+        try {
+            startActivityForResult(pedido, DICTADO_SISTEMA);
+        } catch (Exception e) {
+            dictadoError("el equipo no tiene reconocimiento de voz instalado");
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int codigo, int resultado, Intent datos) {
+        super.onActivityResult(codigo, resultado, datos);
+        if (codigo != DICTADO_SISTEMA) return;
+        ArrayList<String> textos = datos == null ? null
+                : datos.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+        if (resultado == RESULT_OK && textos != null && !textos.isEmpty()) dictadoListo(textos.get(0));
+        else dictadoError("sin texto reconocido");
+    }
+
+    class Oyente implements RecognitionListener {
+        @Override public void onResults(Bundle resultados) {
+            ArrayList<String> textos = resultados.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+            if (textos != null && !textos.isEmpty()) dictadoListo(textos.get(0));
+            else dictadoError("sin texto reconocido");
+        }
+        @Override public void onError(int error) {
+            String que;
+            switch (error) {
+                case SpeechRecognizer.ERROR_NO_MATCH:
+                case SpeechRecognizer.ERROR_SPEECH_TIMEOUT: que = "no se entendió el audio"; break;
+                case SpeechRecognizer.ERROR_NETWORK:
+                case SpeechRecognizer.ERROR_NETWORK_TIMEOUT: que = "sin conexión para reconocer la voz"; break;
+                case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS: que = "sin permiso de micrófono"; break;
+                default: que = "error " + error + " del reconocedor de voz";
+            }
+            dictadoError(que);
+        }
+        @Override public void onReadyForSpeech(Bundle p) { }
+        @Override public void onBeginningOfSpeech() { }
+        @Override public void onRmsChanged(float r) { }
+        @Override public void onBufferReceived(byte[] b) { }
+        @Override public void onEndOfSpeech() { }
+        @Override public void onPartialResults(Bundle p) { }
+        @Override public void onEvent(int t, Bundle p) { }
+    }
+
     /** Pedir la dirección del servidor y guardarla. */
     void cambiarServidor() {
         final EditText campo = new EditText(this);
@@ -195,8 +329,13 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void dictar() {
+            runOnUiThread(MainActivity.this::dictar);
+        }
+
+        @JavascriptInterface
         public String version() {
-            return "1.0";
+            return "1.1";
         }
     }
 
@@ -248,6 +387,11 @@ public class MainActivity extends Activity {
 
     @Override
     public void onRequestPermissionsResult(int codigo, String[] permisos, int[] resultados) {
+        if (codigo == PEDIDO_MICROFONO) {
+            if (resultados.length > 0 && resultados[0] == PackageManager.PERMISSION_GRANTED) dictar();
+            else dictadoError("sin permiso de micrófono");
+            return;
+        }
         if (codigo != PEDIDO_CAMARA || camaraPendiente == null) return;
         if (resultados.length > 0 && resultados[0] == PackageManager.PERMISSION_GRANTED) {
             camaraPendiente.grant(camaraPendiente.getResources());

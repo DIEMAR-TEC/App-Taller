@@ -115,6 +115,15 @@ ul.lista li button{padding:9px 11px;font:inherit;font-size:13px;font-weight:700;
 .camara .marco{position:absolute;left:50%;top:42%;width:64vw;height:64vw;max-width:340px;max-height:340px;
   transform:translate(-50%,-50%);border:3px solid #fff;border-radius:16px;box-shadow:0 0 0 999px #0007}
 .camara .pie{padding:14px;padding-bottom:max(14px,env(safe-area-inset-bottom));background:#000}
+textarea{min-height:130px;resize:vertical;font-size:16px}
+.dictar{display:flex;gap:8px;margin-top:10px}
+.dictar .btn{margin-top:0}
+.btn.grabando{background:#bd3038;animation:late 1s infinite}
+@keyframes late{50%{opacity:.6}}
+.propuesta{margin-top:12px;padding:14px;border-radius:10px;border:2px solid #2563eb;background:var(--surface-1,#fff)}
+.propuesta ul{margin:8px 0 0;padding-left:20px}
+.propuesta li{margin:4px 0}
+.ayuda{font-size:13px;color:var(--ink-muted,#666);margin:6px 0 0}
 .flash{position:fixed;inset:0;z-index:50;pointer-events:none;opacity:0;transition:opacity .35s}
 .flash.bien{background:#16834a;opacity:.35}
 .flash.mal{background:#bd3038;opacity:.45}
@@ -134,6 +143,11 @@ ul.lista li button{padding:9px 11px;font:inherit;font-size:13px;font-weight:700;
 
 <!-- -------------------------------------------------------------- inicio -->
 <section class="vista on" id="v-inicio" data-titulo="Titán Flota · Handheld">
+  <div class="escaner">
+    <input id="i-scan" class="scan" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Escanear un código">
+    <button class="btn chico alt" data-camara="i-scan">Cámara</button>
+  </div>
+  <div id="i-estado"></div>
   <div class="tiles">
     <button class="tile" data-ir="v-baja">
       <span class="ic">−</span>
@@ -147,8 +161,13 @@ ul.lista li button{padding:9px 11px;font:inherit;font-size:13px;font-weight:700;
       <span class="ic">◎</span>
       <span><b>Gomería</b><span>Retirar y montar cubiertas por posición.</span></span>
     </button>
+    <button class="tile" data-ir="v-trabajo">
+      <span class="ic">✎</span>
+      <span><b>Registrar trabajo de gomería</b><span>Escrito o dictado; el sistema lo interpreta y se confirma.</span></span>
+    </button>
   </div>
   <button class="btn alt" id="servidor" hidden>Dirección del servidor</button>
+  <a class="btn alt" href="/handheld/qr" style="text-align:center;text-decoration:none">QR para imprimir</a>
 </section>
 
 <!-- ------------------------------------------------------ baja de repuestos -->
@@ -201,6 +220,24 @@ ul.lista li button{padding:9px 11px;font:inherit;font-size:13px;font-weight:700;
   <p style="font-size:13px;color:var(--ink-muted,#666)">En un ajuste, la cantidad negativa resta.</p>
 </section>
 
+<!-- ------------------------------------------------- registrar trabajo -->
+<section class="vista" id="v-trabajo" data-titulo="Registrar trabajo">
+  <label for="t-scan">Unidad (patente, interno o QR)</label>
+  <div class="escaner">
+    <input id="t-scan" class="scan" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Opcional si figura en el texto">
+    <button class="btn chico alt" data-camara="t-scan">Cámara</button>
+    <button class="btn chico alt" data-teclado="t-scan">⌨</button>
+  </div>
+  <label for="t-texto">Trabajo realizado</label>
+  <textarea id="t-texto" placeholder="3 eje lado izquierdo entran 2 Michelin 079 y 327 recapadas. Salen 2 Fate 380 y 381 para recapar."></textarea>
+  <div class="dictar">
+    <button class="btn alt" id="t-dictar" hidden>🎤 Dictar</button>
+    <button class="btn" id="t-interpretar">Interpretar</button>
+  </div>
+  <p class="ayuda">Qué entra y qué sale, en qué eje y lado, con el número de fuego. Al terminar de dictar se interpreta solo; nada se guarda sin confirmar.</p>
+  <div id="t-salida"></div>
+</section>
+
 <!-- ------------------------------------------------------------- gomería -->
 <section class="vista" id="v-gomeria" data-titulo="Gomería">
   <label for="g-scan">Unidad (patente, interno o QR)</label>
@@ -223,11 +260,28 @@ ul.lista li button{padding:9px 11px;font:inherit;font-size:13px;font-weight:700;
   <div class="pie"><button class="btn alt" id="cam-cerrar">Cerrar cámara</button></div>
 </div>
 
+<script>
+/* Si el navegador del equipo es demasiado viejo para el código de abajo,
+   se avisa con su versión en vez de quedar una pantalla que no responde.
+   Este bloque está escrito a propósito sin sintaxis moderna. */
+window.addEventListener('load', function () {
+  setTimeout(function () {
+    if (window.__hhListo) return;
+    var m = navigator.userAgent.match(/Chrome\/([0-9.]+)/);
+    var caja = document.createElement('div');
+    caja.className = 'estado mal';
+    caja.innerHTML = '<b>Navegador del sistema desactualizado</b>' +
+      'Versión: ' + (m ? 'Chrome ' + m[1] : navigator.userAgent) +
+      '. Actualizar «Android System WebView».';
+    document.querySelector('main').insertBefore(caja, document.querySelector('main').firstChild);
+  }, 400);
+});
+</script>
 <script src="/vendor/jsQR.js" defer></script>
 <script>
 'use strict';
 const $ = s => document.querySelector(s);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hoy = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
 const patente = t => String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const hora = () => new Date().toLocaleTimeString('es-AR', {hour: '2-digit', minute: '2-digit', hour12: false});
@@ -288,8 +342,8 @@ function pitido(ok) {
     g.gain.value = .15;
     o.connect(g); g.connect(AUDIO.destination);
     o.start(); o.stop(AUDIO.currentTime + (ok ? .12 : .45));
-  } catch {}
-  try { navigator.vibrate && navigator.vibrate(ok ? 60 : [200, 80, 200]); } catch {}
+  } catch (e) {}
+  try { navigator.vibrate && navigator.vibrate(ok ? 60 : [200, 80, 200]); } catch (e) {}
   const f = $('#flash');
   f.className = 'flash ' + (ok ? 'bien' : 'mal');
   setTimeout(() => f.className = 'flash', 250);
@@ -304,6 +358,7 @@ function leerCodigo(texto) {
   const t = String(texto || '').trim();
   const rep = t.match(/\/repuestos\/([^/?#]+)/);
   if (rep) return {tipo: 'repuesto', valor: decodeURIComponent(rep[1])};
+  if (/#v-trabajo\b|\/gomeria#register\b/.test(t)) return {tipo: 'trabajo', valor: ''};
   const uni = t.match(/\/u\/([^/?#]+)/);
   if (uni) return {tipo: 'unidad', valor: patente(decodeURIComponent(uni[1]))};
   return {tipo: 'texto', valor: t};
@@ -328,21 +383,49 @@ function escaneado(texto, campoId) {
   if (id === 's-scan') return stockEscaneado(leido);
   if (id === 'g-scan') return gomeriaEscaneada(leido);
   if (id === 'g-fuego') return montarEscaneada(leido);
+  if (id === 't-scan') return trabajoEscaneado(leido);
+  if (id === 'i-scan') return inicioEscaneado(leido);
+}
+
+/* Desde el inicio, el código decide a dónde ir: el QR de un repuesto va a
+   la baja, el de una unidad o el de «registrar trabajo» al parte. */
+async function inicioEscaneado(leido) {
+  if (leido.tipo === 'trabajo') { pitido(true); return ir('v-trabajo'); }
+  if (leido.tipo === 'unidad') { ir('v-trabajo'); return trabajoEscaneado(leido); }
+  if (leido.tipo === 'repuesto') { ir('v-baja'); return bajaEscaneada(leido); }
+  await cargarRepuestos();
+  if (articulo(leido.valor)) { ir('v-baja'); return bajaEscaneada(leido); }
+  pitido(false);
+  estado('#i-estado', 'mal', 'Código no reconocido', ': ' + leido.valor);
 }
 /* La app Android llama a esto cuando el lector avisa por broadcast. */
 window.alEscanear = texto => escaneado(texto);
 
 document.addEventListener('keydown', e => {
   const t = e.target;
-  if (e.key !== 'Enter' || !t.classList || !t.classList.contains('scan')) return;
+  if ((e.key !== 'Enter' && e.keyCode !== 13) || !t.classList || !t.classList.contains('scan')) return;
   e.preventDefault();
+  clearTimeout(t._pausa);
   const valor = t.value;
   t.value = '';
   escaneado(valor, t.id);
 });
+/* El lector configurado sin Enter escribe el código de golpe y se detiene:
+   con el campo en modo lector, una pausa cierra la lectura. */
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (!t.classList || !t.classList.contains('scan') || t.getAttribute('inputmode') !== 'none') return;
+  clearTimeout(t._pausa);
+  t._pausa = setTimeout(() => {
+    const valor = t.value;
+    if (valor.trim().length < 3) return;
+    t.value = '';
+    escaneado(valor, t.id);
+  }, 300);
+});
 document.querySelectorAll('[data-teclado]').forEach(b => b.onclick = () => {
   const campo = document.getElementById(b.dataset.teclado);
-  campo.inputMode = campo.inputMode === 'none' ? 'text' : 'none';
+  campo.setAttribute('inputmode', campo.getAttribute('inputmode') === 'none' ? 'text' : 'none');
   campo.blur(); setTimeout(() => campo.focus(), 50);
 });
 
@@ -362,7 +445,7 @@ async function abrirCamara(campoId) {
     $('#camara').hidden = false;
     let detector = null;
     if ('BarcodeDetector' in window) {
-      try { detector = new BarcodeDetector(); } catch {}
+      try { detector = new BarcodeDetector(); } catch (e) {}
     }
     const lienzo = document.createElement('canvas');
     const ctx = lienzo.getContext('2d', {willReadFrequently: true});
@@ -383,7 +466,7 @@ async function abrirCamara(campoId) {
           const r = jsQR(img.data, ancho, alto, {inversionAttempts: 'dontInvert'});
           if (r) texto = r.data;
         }
-      } catch {}
+      } catch (e) {}
       if (texto) { cerrarCamara(); escaneado(texto, campoId); return; }
       setTimeout(vuelta, 120);
     };
@@ -428,10 +511,10 @@ async function registrar(mov) {
 
 /* ---- baja directa */
 const BAJAS = [];
-try { $('#b-patente').value = localStorage.getItem('hh-patente') || ''; } catch {}
+try { $('#b-patente').value = localStorage.getItem('hh-patente') || ''; } catch (e) {}
 $('#b-patente').addEventListener('change', e => {
   e.target.value = patente(e.target.value);
-  try { localStorage.setItem('hh-patente', e.target.value); } catch {}
+  try { localStorage.setItem('hh-patente', e.target.value); } catch (e) {}
 });
 $('#b-patente').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); e.target.dispatchEvent(new Event('change')); $('#b-scan').focus(); }
@@ -655,7 +738,7 @@ $('#g-posiciones').addEventListener('click', e => {
       <div id="g-candidatas"></div>
       <button class="btn alt" id="g-cancelar">Cancelar</button>`;
     hoja.querySelector('[data-teclado]').onclick = () => {
-      const c = $('#g-fuego'); c.inputMode = c.inputMode === 'none' ? 'text' : 'none'; c.blur(); setTimeout(() => c.focus(), 50);
+      const c = $('#g-fuego'); c.setAttribute('inputmode', c.getAttribute('inputmode') === 'none' ? 'text' : 'none'); c.blur(); setTimeout(() => c.focus(), 50);
     };
     setTimeout(() => $('#g-fuego').focus(), 0);
   }
@@ -715,6 +798,115 @@ async function montar(cub) {
   }
 }
 
+/* ------------------------------------------------------- registrar trabajo */
+let PARTE = null, T_PATENTE = '';
+function trabajoEscaneado(leido) {
+  if (leido.tipo === 'repuesto') { pitido(false); return estado('#t-salida', 'mal', 'No es una unidad', ': ' + leido.valor); }
+  if (leido.tipo === 'trabajo') return pitido(true);
+  T_PATENTE = leido.tipo === 'unidad' ? leido.valor : patente(leido.valor);
+  $('#t-scan').placeholder = T_PATENTE || 'Opcional si figura en el texto';
+  $('#t-scan').value = '';
+  pitido(true);
+  estado('#t-salida', 'bien', 'Unidad: ' + T_PATENTE);
+  $('#t-texto').focus();
+}
+
+async function interpretarParte() {
+  const boton = $('#t-interpretar');
+  const texto = $('#t-texto').value.trim();
+  if (!texto) { pitido(false); return estado('#t-salida', 'mal', 'Falta describir el trabajo realizado'); }
+  boton.disabled = true;
+  boton.textContent = 'Interpretando…';
+  try {
+    const d = await api('/api/interpretar', {patente: T_PATENTE, texto: texto});
+    PARTE = d.parte_id;
+    const p = d.propuesta || {};
+    if (!(p.acciones || []).length) {
+      pitido(false);
+      return estado('#t-salida', 'aviso', p.pregunta || 'No se pudo interpretar el movimiento');
+    }
+    pitido(true);
+    const u = d.unidad || {};
+    $('#t-salida').innerHTML = `<div class="propuesta"><b>${esc(u.patente || '')} · ${esc(p.resumen || 'Movimiento interpretado')}</b><ul>` +
+      p.acciones.map(a => `<li>${esc(a.tipo)} · ${esc(a.posicion || '')}` +
+        (a.posicion_destino ? ' → ' + esc(a.posicion_destino) : '') +
+        (a.cubierta ? ' · ' + esc(a.cubierta) : '') + '</li>').join('') +
+      `</ul><button class="btn" id="t-confirmar">Confirmar</button>
+      <button class="btn alt" id="t-descartar">Descartar</button></div>`;
+    $('#t-confirmar').onclick = confirmarParte;
+    $('#t-descartar').onclick = descartarParte;
+  } catch (e) {
+    pitido(false);
+    estado('#t-salida', 'mal', 'No se interpretó', ': ' + e.message);
+  } finally {
+    boton.disabled = false;
+    boton.textContent = 'Interpretar';
+  }
+}
+$('#t-interpretar').onclick = interpretarParte;
+
+async function confirmarParte() {
+  const boton = $('#t-confirmar');
+  boton.disabled = true;
+  try {
+    const d = await api('/api/confirmar', {parte_id: PARTE});
+    pitido(true);
+    $('#t-salida').innerHTML = '<div class="estado bien"><b>Movimiento guardado</b>' +
+      (d.hecho || []).map(esc).join('<br>') + '</div>';
+    $('#t-texto').value = '';
+    PARTE = null;
+  } catch (e) {
+    pitido(false);
+    boton.disabled = false;
+    estado('#t-salida', 'mal', 'No se guardó', ': ' + e.message);
+  }
+}
+async function descartarParte() {
+  try { await api('/api/descartar', {parte_id: PARTE}); } catch (e) {}
+  PARTE = null;
+  $('#t-salida').innerHTML = '';
+}
+
+/* El dictado: en la APK lo hace el reconocedor de Android (TitanApp.dictar),
+   en el navegador el reconocimiento de voz de Chrome. Sin ninguno de los
+   dos, el botón no aparece. */
+let RECONOCEDOR = null;
+const VOZ_WEB = window.SpeechRecognition || window.webkitSpeechRecognition;
+const VOZ_APP = window.TitanApp && typeof TitanApp.dictar === 'function';
+if (VOZ_APP || VOZ_WEB) $('#t-dictar').hidden = false;
+
+function dictado(texto) {
+  const caja = $('#t-texto');
+  caja.value = (caja.value.trim() ? caja.value.trim() + ' ' : '') + texto;
+  $('#t-dictar').classList.remove('grabando');
+  $('#t-dictar').textContent = '🎤 Dictar';
+  interpretarParte();
+}
+window.alDictar = dictado;
+window.alDictarError = msg => {
+  $('#t-dictar').classList.remove('grabando');
+  $('#t-dictar').textContent = '🎤 Dictar';
+  pitido(false);
+  estado('#t-salida', 'mal', 'Dictado', ': ' + msg);
+};
+$('#t-dictar').onclick = () => {
+  const b = $('#t-dictar');
+  if (b.classList.contains('grabando')) {
+    if (RECONOCEDOR) RECONOCEDOR.stop();
+    return;
+  }
+  b.classList.add('grabando');
+  b.textContent = '● Escuchando';
+  if (VOZ_APP) return TitanApp.dictar();
+  RECONOCEDOR = new VOZ_WEB();
+  RECONOCEDOR.lang = 'es-AR';
+  RECONOCEDOR.interimResults = false;
+  RECONOCEDOR.onresult = e => dictado(Array.from(e.results).map(r => r[0].transcript).join(' '));
+  RECONOCEDOR.onerror = e => window.alDictarError(e.error || 'sin audio');
+  RECONOCEDOR.onend = () => { b.classList.remove('grabando'); b.textContent = '🎤 Dictar'; };
+  RECONOCEDOR.start();
+};
+
 /* ------------------------------------------------------------------ inicio */
 /* Dentro de la APK, la dirección del servidor se cambia desde acá. */
 if (window.TitanApp) {
@@ -727,6 +919,7 @@ fetch('/api/yo').then(r => r.ok ? r.json() : null).then(d => {
   $('#quien').textContent = d.nombre || d.usuario || '';
 }).catch(() => {});
 ir(location.hash.slice(1) && document.getElementById(location.hash.slice(1)) ? location.hash.slice(1) : 'v-inicio', false);
+window.__hhListo = true;
 </script>
 </body>
 </html>

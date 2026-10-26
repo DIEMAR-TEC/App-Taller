@@ -182,3 +182,60 @@ def hoja(cx, base, rubro=None, codigos=None):
 </body>
 </html>
 """
+
+
+def cartel_handheld(cx, base):
+    """El QR de «registrar trabajo» y uno por unidad, para pegar en la
+    gomería y en cada camión. La handheld los lee y abre el parte; un
+    celular que los escanea abre la misma pantalla en el navegador."""
+    base = base.rstrip("/")
+    unidades = cx.execute("""
+        select patente, interno from unidades where activa
+        order by patente""").fetchall()
+
+    def tarjeta(destino, titulo, sub):
+        return f"""    <div class="et">
+      {_qr(destino)}
+      <div class="txt"><b>{html.escape(titulo)}</b><span class="desc">{html.escape(sub)}</span></div>
+    </div>"""
+
+    grande = f"""<div class="grande">{_qr(base + "/handheld#v-trabajo")}
+      <h1>Registrar trabajo de gomería</h1>
+      <p>Escanear para cargar el parte escrito o dictado.</p></div>"""
+    chicas = "\n".join(tarjeta(f"{base}/gomeria/u/{u['patente']}", u["patente"],
+                               f"Int. {u['interno']}" if u["interno"] else "Gomería")
+                       for u in unidades)
+    return f"""<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><title>QR de gomería | Titán Flota</title>
+<style>
+  @page {{ size: A4; margin: 8mm; }}
+  * {{ box-sizing: border-box; }}
+  body {{ margin: 0; background: #6b7280; color: #111; font: 13px Inter, system-ui, sans-serif; }}
+  .barra {{ position: sticky; top: 0; display: flex; gap: 14px; align-items: center;
+    padding: 12px 20px; background: #12161a; color: #edf0f2; }}
+  .barra a, .barra button {{ color: #fff; background: #2563eb; border: 0; border-radius: 9px;
+    padding: 9px 15px; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }}
+  .hoja {{ width: 210mm; margin: 14px auto; padding: 8mm; background: #fff; }}
+  .grande {{ text-align: center; padding: 10mm 0; break-after: page; }}
+  .grande .qr {{ width: 120mm; height: 120mm; }}
+  .grande h1 {{ font-size: 26pt; margin: 6mm 0 2mm; }}
+  .grilla {{ display: grid; grid-template-columns: repeat({COLUMNAS}, {ANCHO_MM}mm);
+    grid-auto-rows: {ALTO_MM}mm; justify-content: center; }}
+  .et {{ display: flex; align-items: center; gap: 3mm; padding: 2.5mm; border: 1px dashed #d4d4d8; }}
+  .et .qr {{ height: {ALTO_MM - 7}mm; width: {ALTO_MM - 7}mm; flex: none; }}
+  .et b {{ display: block; font-size: 13pt; }}
+  .et .desc {{ font-size: 8pt; color: #52525b; }}
+  @media print {{ body {{ background: #fff; }} .barra {{ display: none; }}
+    .hoja {{ width: auto; margin: 0; padding: 0; }} .et {{ break-inside: avoid; }} }}
+</style></head>
+<body>
+<div class="barra"><a href="/handheld">‹ Volver</a><b>QR de gomería</b>
+  <button onclick="print()">Imprimir</button></div>
+<div class="hoja">
+{grande}
+<div class="grilla">
+{chicas}
+</div>
+</div>
+</body></html>
+"""
