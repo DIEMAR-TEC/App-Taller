@@ -32,7 +32,8 @@ depósito y la gomería.
   **Orden interna** y **Servicio externo** (abren `/movil` con la unidad
   elegida). Los datos salen de `/api/handheld/unidad`, que arma la misma
   ficha de Flota más el combustible.
-- **QR para imprimir** (`/handheld/qr`): uno grande de «Registrar trabajo»
+- **QR para imprimir** (`/handheld/qr`, solo con el permiso «gestiona»,
+  desde la computadora; no tiene acceso desde la handheld): uno grande de «Registrar trabajo»
   y uno por unidad que abre su ficha. Sirven con la handheld y con la
   cámara de cualquier celular. Los QR viejos de gomería (`/gomeria/u/…`)
   escaneados con la handheld también abren la ficha.
@@ -78,9 +79,8 @@ para la pantalla, se muestra un aviso con su versión.
   compilaciones salen con la misma firma y la versión nueva se instala
   encima. Sin esos secretos cada compilación tiene firma propia y para
   actualizar hay que desinstalar la anterior.
-- Abre `https://app-taller-cu5d.onrender.com/handheld`. La dirección se
-  cambia con el botón *Dirección del servidor* de la pantalla de inicio de
-  la app, o desde la pantalla de error si no hay conexión.
+- Abre `https://app.titanfleetmanagement.com/handheld`. La dirección es fija:
+  la terminal la usan los empleados y no hay forma de cambiarla desde la app.
 - La pantalla vive en el servidor: un cambio en `handheld.html` llega a
   todas las terminales sin reinstalar.
 

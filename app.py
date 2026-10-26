@@ -575,6 +575,11 @@ class App(CupoPorPedido, gom.Handler):
         if ruta == "/handheld/qr":
             if not self._exigir_sesion():
                 return
+            # Imprimir los QR es de quien gestiona, no de los empleados que
+            # usan la handheld.
+            if not permisos.gestiona(self.usuario):
+                return self._responder(_sin_permiso("QR de gomería", self.usuario),
+                                       "text/html; charset=utf-8", codigo=403)
             try:
                 with base.conectar() as cx:
                     esquema = "https" if self._es_https() else "http"
