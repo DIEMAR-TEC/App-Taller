@@ -185,9 +185,10 @@ def hoja(cx, base, rubro=None, codigos=None):
 
 
 def cartel_handheld(cx, base):
-    """El QR de «registrar trabajo» y uno por unidad, para pegar en la
-    gomería y en cada camión. La handheld los lee y abre el parte; un
-    celular que los escanea abre la misma pantalla en el navegador."""
+    """El QR de «registrar trabajo», para la gomería, y uno por unidad,
+    para pegar en cada camión: abre su ficha (historia clínica) con los
+    accesos a cubiertas y órdenes. Sirven igual desde la handheld y desde
+    la cámara de un celular."""
     base = base.rstrip("/")
     unidades = cx.execute("""
         select patente, interno from unidades where activa
@@ -202,8 +203,8 @@ def cartel_handheld(cx, base):
     grande = f"""<div class="grande">{_qr(base + "/handheld#v-trabajo")}
       <h1>Registrar trabajo de gomería</h1>
       <p>Escanear para cargar el parte escrito o dictado.</p></div>"""
-    chicas = "\n".join(tarjeta(f"{base}/gomeria/u/{u['patente']}", u["patente"],
-                               f"Int. {u['interno']}" if u["interno"] else "Gomería")
+    chicas = "\n".join(tarjeta(f"{base}/handheld/u/{u['patente']}", u["patente"],
+                               f"Int. {u['interno']}" if u["interno"] else "Ficha de la unidad")
                        for u in unidades)
     return f"""<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"><title>QR de gomería | Titán Flota</title>

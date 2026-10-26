@@ -548,6 +548,28 @@ class App(CupoPorPedido, gom.Handler):
                 traceback.print_exc()
                 return self._error(f"No se pudieron armar las etiquetas: {e}", 500)
 
+        # La historia clínica de la unidad: lo que abre el QR pegado en el
+        # camión. La pantalla es la de la handheld, parada en esa unidad.
+        if ruta.startswith("/handheld/u/"):
+            if not self._exigir_sesion():
+                return
+            return self._responder(open(os.path.join(AQUI, "handheld.html"), "rb").read(),
+                                   "text/html; charset=utf-8")
+
+        if ruta == "/api/handheld/unidad":
+            if not self._exigir_sesion():
+                return
+            patente = (parse_qs(urlparse(self.path).query).get("patente") or [""])[0]
+            try:
+                with base.conectar() as cx:
+                    datos = uni.historia_clinica(cx, patente)
+                if not datos:
+                    return self._error(f"No se encontró la unidad {patente}.", 404)
+                return self._responder(gom.jstr(datos))
+            except Exception as e:
+                traceback.print_exc()
+                return self._error(f"No se pudo leer la unidad: {e}", 500)
+
         # Los QR de gomería para la handheld: «registrar trabajo» y uno por
         # unidad.
         if ruta == "/handheld/qr":

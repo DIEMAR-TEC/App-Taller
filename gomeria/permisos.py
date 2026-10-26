@@ -90,6 +90,9 @@ RUTAS = {
     # revisa además su propio módulo.
     "/handheld": ("repuestos", "gomeria"),
     "/handheld/qr": "gomeria",
+    # La historia clínica de la unidad, la que abre su QR: la ven todos los
+    # que trabajan sobre el camión.
+    "/api/handheld/unidad": ("gomeria", "repuestos", "unidades", "ordenes", "flota"),
     "/api/estanterias": "repuestos",
     "/ordenes": "ordenes", "/api/ordenes": "ordenes", "/api/factura": "ordenes",
     "/solicitudes": "solicitudes", "/api/solicitudes": "solicitudes",
@@ -151,6 +154,7 @@ PREFIJOS = (
     # la ficha de la unidad.
     ("/api/gomeria/", ("gomeria", "unidades")),
     ("/u/", "gomeria"),
+    ("/handheld/u/", ("gomeria", "repuestos", "unidades", "ordenes", "flota")),
 )
 
 

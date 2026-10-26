@@ -307,12 +307,25 @@ function ocupado(boton, si, textoOcupado) {
 /* ------------------------------------------------------------------- unidades */
 let FLOTA = [];
 async function cargarFlota() {
-  try { FLOTA = await api('/api/flota'); } catch { FLOTA = []; }
+  try { FLOTA = await api('/api/flota'); } catch (e) { FLOTA = []; }
   const opciones = FLOTA.map(u =>
     `<option value="${esc(u.patente)}">${esc(u.patente)}${u.interno ? ' · int. ' + esc(u.interno) : ''}</option>`).join('');
   ['#g-unidad', '#o-unidad', '#x-unidad'].forEach(sel => {
     $(sel).innerHTML = '<option value="">Seleccionar patente</option>' + opciones;
   });
+  /* Desde la ficha de la unidad (el QR del camión) llega ?patente=: la
+     unidad ya viene elegida. Si el rol no abre Flota la lista llega vacía,
+     y la patente se agrega igual. */
+  const pedida = new URLSearchParams(location.search).get('patente');
+  if (pedida) {
+    ['#g-unidad', '#o-unidad', '#x-unidad'].forEach(sel => {
+      if (![...$(sel).options].some(o => o.value === pedida))
+        $(sel).insertAdjacentHTML('beforeend', `<option value="${esc(pedida)}">${esc(pedida)}</option>`);
+      $(sel).value = pedida;
+    });
+    kmOrden();
+    kmExterno();
+  }
 }
 
 /* El odómetro del satelital para esa unidad y esa fecha. Ahorra el dato que
@@ -337,7 +350,7 @@ async function kmDelSatelital(patente, fecha, campo, ayuda) {
     } else if (ayuda) {
       $(ayuda).textContent = 'Sin lectura del satelital para esa fecha: se carga a mano.';
     }
-  } catch { /* sin lectura, se escribe a mano */ }
+  } catch (e) { /* sin lectura, se escribe a mano */ }
 }
 
 /* Si lo escribe una persona deja de ser del satelital, y no se vuelve a pisar. */

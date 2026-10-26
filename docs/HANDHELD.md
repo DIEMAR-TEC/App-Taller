@@ -24,13 +24,22 @@ depósito y la gomería.
   interpreta solo. El dictado usa el reconocedor de voz de Android (en la
   APK) o el de Chrome (en el navegador); si el equipo no tiene ninguno, el
   botón no aparece o avisa.
+- **Ficha de la unidad** (`/handheld/u/PATENTE`, la historia clínica):
+  datos de la unidad, km actual y de los últimos 30 días, litros y L/100 km
+  de los últimos seis meses, documentos vencidos o por vencer, órdenes de
+  trabajo con su costo, cubiertas puestas y últimos movimientos de gomería.
+  Desde ahí: **Cubiertas** (retirar y montar), **Registrar trabajo**,
+  **Orden interna** y **Servicio externo** (abren `/movil` con la unidad
+  elegida). Los datos salen de `/api/handheld/unidad`, que arma la misma
+  ficha de Flota más el combustible.
 - **QR para imprimir** (`/handheld/qr`): uno grande de «Registrar trabajo»
-  y uno por unidad. Escaneados desde el inicio de la handheld abren el
-  parte (con la unidad ya elegida si es el QR de una unidad).
+  y uno por unidad que abre su ficha. Sirven con la handheld y con la
+  cámara de cualquier celular. Los QR viejos de gomería (`/gomeria/u/…`)
+  escaneados con la handheld también abren la ficha.
 
 Desde el inicio, cualquier código escaneado va a donde corresponde: el QR
-de un repuesto a la baja, el de una unidad o el de registrar trabajo al
-parte.
+de un repuesto a la baja, el de una unidad a su ficha y el de registrar
+trabajo al parte.
 
 Usa las mismas API y permisos que Repuestos y Gomería. Abre con el módulo
 Repuestos o Gomería; montar y retirar cubiertas pide «gestiona».
