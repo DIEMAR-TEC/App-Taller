@@ -20,7 +20,7 @@ import permisos
 # parado al lado de la unidad y ahí el ancho es todo. La portada tampoco,
 # que ya trae la suya.
 SIN_BARRA = ("/", "/movil", "/handheld", "/handheld/qr")
-SIN_BARRA_PREFIJO = ("/u/",)
+SIN_BARRA_PREFIJO = ("/u/", "/handheld/")
 
 MODULOS = [
     {"href": "/", "modulo": None, "texto": "Inicio",

@@ -741,6 +741,40 @@ def ficha(cx, unidad_id):
     return salida
 
 
+def historia_clinica(cx, texto):
+    """La ficha de la unidad para el QR pegado en el camión.
+
+    Es la misma ficha de Flota, más lo que hace falta parado al lado de la
+    unidad: los litros y el consumo de los últimos meses y los últimos
+    movimientos de gomería. Se busca por patente o interno, que es lo que
+    trae el QR o lo que se tipea.
+    """
+    import base as _base
+    unidad = _base.buscar_unidad(cx, texto)
+    if not unidad:
+        return None
+    salida = ficha(cx, unidad["id"])
+    if not salida:
+        return None
+    # Litros, km y consumo por mes, de la misma vista que el módulo de
+    # Combustible. Sin 17_combustible_flota.sql corrido viene vacío.
+    salida["combustible"] = _bloque(cx, """
+        select mes, cargas, litros, importe, km, litros_100km, sin_consumo
+        from v_combustible_flota
+        where unidad_id = %s and mes >= date_trunc('month', current_date) - interval '5 months'
+        order by mes desc""", (unidad["id"],))
+    salida["gomeria"] = _bloque(cx, """
+        select mv.fecha, mv.tipo, c.codigo as cubierta,
+               po.codigo as desde, pd.codigo as hasta, mv.usuario, mv.nota
+        from movimientos mv
+        left join cubiertas c on c.id = mv.cubierta_id
+        left join configuracion_posiciones po on po.id = mv.posicion_origen_id
+        left join configuracion_posiciones pd on pd.id = mv.posicion_destino_id
+        where mv.unidad_id = %s and mv.deshecho is null
+        order by mv.fecha desc limit 15""", (unidad["id"],))
+    return salida
+
+
 def una(cx, unidad_id):
     return cx.execute("select * from v_unidades where id = %s", (unidad_id,)).fetchone()
 

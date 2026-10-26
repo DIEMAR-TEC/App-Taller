@@ -31,7 +31,21 @@ const ARTS = [
       const req = route.request();
       const url = new URL(req.url());
       const p = url.pathname;
-      if (p === '/handheld') return route.fulfill({path: path.join(dir, 'handheld.html'), contentType: 'text/html'});
+      if (p === '/api/handheld/unidad') {
+        if (url.searchParams.get('patente') !== 'AD247MQ')
+          return route.fulfill({status: 404, json: {error: 'No se encontró la unidad AD247MQ.'}});
+        return route.fulfill({json: {
+          unidad: {id: 7, patente: 'AD247MQ', interno: '12', marca: 'Scania', chofer: 'Pérez', km_actual: 512345},
+          recorrido: {km: 8200, dias: 28},
+          combustible: [{mes: '2026-10-01', litros: 2950, km: 8100, litros_100km: 36.4},
+                        {mes: '2026-09-01', litros: 3100, km: null, litros_100km: null, sin_consumo: 'sin lecturas'}],
+          ordenes: {total: 450000, ordenes: [{numero: 'OT-0012', fecha: '2026-10-10', tipo: 'interna', estado: 'abierta',
+                                              mantenimiento: 'correctivo', solicitado: 'Pérdida de aire', total: 120000}]},
+          cubiertas: [{posicion: 'D1I', cubierta: 'F100', marca: 'Fate', remanente_mm: 12}],
+          documentos: [{tipo: 'VTV', vence: '2026-10-01', estado: 'vencido'}],
+          gomeria: [{fecha: '2026-10-20', tipo: 'montaje', cubierta: 'F100', hasta: 'D1I'}]}});
+      }
+      if (p === '/handheld' || p.startsWith('/handheld/u/')) return route.fulfill({path: path.join(dir, 'handheld.html'), contentType: 'text/html'});
       if (p === '/vendor/jsQR.js') return route.fulfill({path: path.join(dir, 'vendor/jsQR.js')});
       if (p === '/api/yo') return route.fulfill({json: {nombre: 'Operario', usuario: 'op'}});
       if (p === '/api/repuestos' && req.method() === 'GET')
@@ -151,9 +165,12 @@ const ARTS = [
     await page.waitForFunction(() => /montada/.test(document.querySelector('#g-estado').textContent));
     assert.deepStrictEqual([posts.at(-1).accion, posts.at(-1).cubierta_id, posts.at(-1).posicion_id], ['montar', 900, 12]);
 
-    // Registrar trabajo: el QR de la unidad desde el inicio abre el parte.
+    // Registrar trabajo: el QR de la unidad desde el inicio abre su ficha,
+    // y de ahí el parte con la unidad elegida.
     await page.click('#volver');
     await page.evaluate(() => window.alEscanear('https://app.test/gomeria/u/AD247MQ'));
+    await page.waitForSelector('#v-unidad.on [data-acc="trabajo"]');
+    await page.click('[data-acc="trabajo"]');
     await page.waitForSelector('#v-trabajo.on');
     await page.fill('#t-texto', '3 eje izquierdo entra Michelin 079');
     await page.click('#t-interpretar');
@@ -180,6 +197,21 @@ const ARTS = [
     await page.keyboard.insertText('https://app.test/repuestos/FIL-001');
     await page.waitForFunction(n => document.querySelector('#v-baja.on') && document.querySelectorAll('#b-lista li').length > 3, antes);
     assert.strictEqual(posts.at(-1).movimiento.codigo, 'FIL-001');
+
+    // El QR pegado en el camión abre su ficha.
+    await page.goto('http://hh.test/handheld/u/AD247MQ');
+    await page.waitForSelector('#v-unidad.on .kpi');
+    const ficha = await page.textContent('#u-ficha');
+    for (const t of ['512.345', '8.200', '2.950', '36,4', 'OT-0012', 'Pérdida de aire', 'VTV', 'F100'])
+      assert.ok(ficha.includes(t), 'falta ' + t + ' en la ficha');
+    assert.strictEqual(await page.getAttribute('a[href*="#v-orden"]', 'href'), '/movil?patente=AD247MQ#v-orden');
+    assert.strictEqual(await page.getAttribute('a[href*="#v-externo"]', 'href'), '/movil?patente=AD247MQ#v-externo');
+    await page.click('[data-acc="cubiertas"]');
+    await page.waitForSelector('#v-gomeria.on .pos');
+    // Desde el inicio, el QR de una unidad abre la ficha.
+    await page.click('#volver');
+    await page.evaluate(() => window.alEscanear('https://app.test/handheld/u/AD247MQ'));
+    await page.waitForSelector('#v-unidad.on .kpi');
 
     assert.deepStrictEqual(errores, []);
     console.log('handheld_smoke: ok');
