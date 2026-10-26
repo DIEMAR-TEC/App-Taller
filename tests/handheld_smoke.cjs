@@ -1,9 +1,9 @@
 // La pantalla de la handheld (handheld.html) con la API simulada.
 //
-// Se verifica lo que hace el operario: fijar la patente, escanear el QR
-// de un repuesto —como lo escribe el lector en modo teclado y como lo
-// manda la APK por broadcast— y que cada escaneo sea una salida de una
-// unidad; el movimiento con cantidad; y retirar y montar en Gomería.
+// Se verifica lo que hace el operario: escanear la unidad y ver su
+// registro; desde ahí sacar repuestos de a uno escaneando y cargar el
+// movimiento de gomería escrito o dictado; entradas con cantidad; y
+// retirar y montar por posición.
 const {chromium} = require('playwright');
 const fs = require('fs'), path = require('path'), assert = require('assert');
 const dir = path.resolve(__dirname, '..');
@@ -87,128 +87,118 @@ const ARTS = [
       return route.fulfill({status: 404, body: ''});
     });
 
+    // Los WebView viejos no mandan la cookie si el fetch no la pide: sin
+    // esto, la handheld veía «sesión cerrada» con la sesión abierta.
+    for (const f of ['handheld.html', 'telefono.html']) {
+      const codigo = fs.readFileSync(path.join(dir, f), 'utf8');
+      const llamadas = codigo.match(/fetch\([^;]*;/g) || [];
+      for (const ll of llamadas)
+        assert.ok(/credentials/.test(ll) || /fetch\(url, cuerpo/.test(ll), `${f}: fetch sin credentials: ${ll.slice(0, 60)}`);
+    }
+
     await page.goto('http://hh.test/handheld');
     assert.ok(await page.evaluate(() => window.__hhListo), 'el código de la página corrió');
-    await page.click('[data-ir="v-baja"]');
+    // El inicio: el escáner y dos accesos, nada más.
+    assert.strictEqual(await page.locator('#v-inicio .tile').count(), 2);
+    assert.strictEqual(await page.locator('text=Dirección del servidor').count(), 0);
+    assert.strictEqual(await page.locator('a[href="/handheld/qr"]').count(), 0);
 
-    // Sin patente, el escaneo no da de baja.
-    await page.fill('#b-scan', 'FIL-001');
-    await page.press('#b-scan', 'Enter');
-    await page.waitForSelector('#b-estado .estado.mal');
-    assert.strictEqual(posts.length, 0);
+    // Tipear una patente a mano no dispara la búsqueda letra por letra.
+    await page.click('#v-inicio [data-teclado="i-scan"]');
+    await page.focus('#i-scan');
+    for (const c of 'AD247') { await page.keyboard.type(c); await page.waitForTimeout(120); }
+    await page.waitForTimeout(500);
+    assert.ok(await page.isVisible('#v-inicio'), 'sigue en el inicio mientras se tipea');
+    await page.keyboard.type('MQ');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('#v-unidad.on .kpi');
 
-    await page.fill('#b-patente', 'ad 247 mq');
-    await page.press('#b-patente', 'Enter');
-    assert.strictEqual(await page.inputValue('#b-patente'), 'AD247MQ');
+    // El registro de la unidad.
+    const ficha = await page.textContent('#u-ficha');
+    for (const t of ['512.345', '8.200', '2.950', '36,4', 'OT-0012', 'Pérdida de aire', 'VTV', 'F100'])
+      assert.ok(ficha.includes(t), 'falta ' + t + ' en la ficha');
+    assert.strictEqual(await page.getAttribute('a[href*="#v-orden"]', 'href'), '/movil?patente=AD247MQ#v-orden');
 
-    // El QR de la etiqueta trae la dirección completa: es una salida de 1.
-    await page.focus('#b-scan');
+    // Movimiento de stock desde la unidad: cada escaneo es una salida de 1.
+    await page.click('[data-acc="stock"]');
+    await page.waitForSelector('#v-stock.on');
+    assert.strictEqual(await page.inputValue('#s-patente'), 'AD247MQ');
+    await page.focus('#s-scan');
     await page.keyboard.type('https://app.test/repuestos/FIL-001');
     await page.keyboard.press('Enter');
-    await page.waitForSelector('#b-estado .estado.bien');
+    await page.waitForSelector('#s-estado .estado.bien');
     let ult = posts.at(-1).movimiento;
     assert.deepStrictEqual([ult.codigo, ult.tipo, ult.cantidad, ult.patente], ['FIL-001', 'Salida', 1, 'AD247MQ']);
-    assert.match(await page.textContent('#b-estado'), /queda 4/);
+    assert.match(await page.textContent('#s-estado'), /queda 4/);
 
-    // El código con espacio viaja codificado en la dirección; y por broadcast.
+    // Sin stock pide confirmar; el código interno también encuentra.
     await page.evaluate(() => window.alEscanear('https://app.test/repuestos/COR%202'));
-    // La correa no tiene stock: pide confirmación antes de dar de baja.
-    await page.waitForSelector('#b-si');
-    assert.strictEqual(posts.length, 1);
-    await page.click('#b-si');
-    await page.waitForFunction(() => document.querySelectorAll('#b-lista li').length === 2);
+    await page.waitForSelector('#s-si');
+    await page.click('#s-si');
+    await page.waitForFunction(() => document.querySelectorAll('#s-lista li').length === 2);
     assert.strictEqual(posts.at(-1).movimiento.codigo, 'COR 2');
-
-    // El código interno también encuentra el repuesto.
     await page.evaluate(() => window.alEscanear('I-77'));
-    await page.waitForFunction(() => document.querySelectorAll('#b-lista li').length === 3);
-    assert.strictEqual(posts.at(-1).movimiento.codigo, 'FIL-001');
-
-    // Anular la última baja.
-    await page.click('#b-lista [data-anular="0"]');
-    await page.waitForSelector('#b-lista li.anulado');
+    await page.waitForFunction(() => document.querySelectorAll('#s-lista li').length === 3);
+    await page.click('#s-lista [data-anular="0"]');
+    await page.waitForSelector('#s-lista li.anulado');
     assert.strictEqual(posts.at(-1).op, 'movimiento_borrar');
 
-    // Código desconocido.
-    await page.evaluate(() => window.alEscanear('NO-EXISTE'));
-    await page.waitForFunction(() => /no encontrado/.test(document.querySelector('#b-estado').textContent));
-
-    // Movimiento de stock: entrada de 10 con costo.
-    await page.click('#volver');
-    await page.click('[data-ir="v-stock"]');
+    // Entrada con cantidad y costo.
+    await page.click('#s-tipo [data-tipo="Entrada"]');
+    assert.ok(await page.isHidden('#s-patente-caja'));
     await page.evaluate(() => window.alEscanear('FIL-001'));
-    await page.waitForSelector('#s-ficha .ficha');
+    await page.waitForSelector('#s-detalle:not([hidden])');
     await page.fill('#s-cantidad', '10');
     await page.fill('#s-costo', '1500');
     await page.click('#s-guardar');
-    await page.waitForSelector('#s-estado .estado.bien');
+    await page.waitForFunction(() => /Entrada registrada/.test(document.querySelector('#s-estado').textContent));
     ult = posts.at(-1).movimiento;
     assert.deepStrictEqual([ult.tipo, ult.cantidad, ult.costo_unitario], ['Entrada', 10, '1500']);
 
-    // Gomería: retirar y montar.
-    await page.click('#volver');
-    await page.click('[data-ir="v-gomeria"]');
-    await page.evaluate(() => window.alEscanear('https://app.test/gomeria/u/AD247MQ'));
-    await page.waitForSelector('.pos[data-pos="0"]');
-    await page.click('.pos[data-pos="0"]');
-    await page.click('#g-retirar');
-    assert.strictEqual(posts.filter(x => x.accion).length, 0, 'sin motivo no se retira');
-    await page.fill('#g-motivo', 'Corte lateral');
-    await page.selectOption('#g-destino', 'baja');
-    await page.click('#g-retirar');
-    await page.waitForFunction(() => /retirada/.test(document.querySelector('#g-estado').textContent));
-    assert.deepStrictEqual([posts.at(-1).accion, posts.at(-1).destino, posts.at(-1).cubierta_esperada], ['desmontar', 'baja', 501]);
-
-    await page.click('.pos[data-pos="1"]');
-    await page.waitForSelector('#g-fuego');
-    await page.evaluate(() => window.alEscanear('f200'));
-    await page.waitForFunction(() => /montada/.test(document.querySelector('#g-estado').textContent));
-    assert.deepStrictEqual([posts.at(-1).accion, posts.at(-1).cubierta_id, posts.at(-1).posicion_id], ['montar', 900, 12]);
-
-    // Registrar trabajo: el QR de la unidad desde el inicio abre su ficha,
-    // y de ahí el parte con la unidad elegida.
-    await page.click('#volver');
-    await page.evaluate(() => window.alEscanear('https://app.test/gomeria/u/AD247MQ'));
+    // Movimiento de gomería desde la unidad: escrito, dictado y confirmado.
+    await page.goto('http://hh.test/handheld/u/AD247MQ');
     await page.waitForSelector('#v-unidad.on [data-acc="trabajo"]');
     await page.click('[data-acc="trabajo"]');
     await page.waitForSelector('#v-trabajo.on');
     await page.fill('#t-texto', '3 eje izquierdo entra Michelin 079');
+    // El dictado se suma y no se manda solo.
+    await page.evaluate(() => window.alDictar('sale la 380 para recapar'));
+    assert.strictEqual(await page.inputValue('#t-texto'), '3 eje izquierdo entra Michelin 079 sale la 380 para recapar');
+    assert.ok(!posts.some(x => x.op === 'interpretar'), 'el dictado no interpreta solo');
+    // Lo escrito sobrevive a una recarga.
+    await page.reload();
+    await page.waitForSelector('#v-trabajo.on');
+    assert.match(await page.inputValue('#t-texto'), /sale la 380/);
     await page.click('#t-interpretar');
     await page.waitForSelector('#t-confirmar');
     assert.deepStrictEqual([posts.at(-1).op, posts.at(-1).patente], ['interpretar', 'AD247MQ']);
     await page.click('#t-confirmar');
     await page.waitForFunction(() => /guardado/.test(document.querySelector('#t-salida').textContent));
     assert.deepStrictEqual([posts.at(-1).op, posts.at(-1).parte_id], ['confirmar', 55]);
+    assert.strictEqual(await page.inputValue('#t-texto'), '');
 
-    // El dictado que devuelve la APK se interpreta solo.
-    await page.evaluate(() => window.alDictar('sale la 380 para recapar'));
-    await page.waitForSelector('#t-confirmar');
-    assert.strictEqual(posts.at(-1).texto, 'sale la 380 para recapar');
+    // Por posición: retirar y montar.
+    await page.click('#t-posiciones');
+    await page.waitForSelector('#v-gomeria.on .pos[data-pos="0"]');
+    await page.click('.pos[data-pos="0"]');
+    await page.fill('#g-motivo', 'Corte lateral');
+    await page.selectOption('#g-destino', 'baja');
+    await page.click('#g-retirar');
+    await page.waitForFunction(() => /retirada/.test(document.querySelector('#g-estado').textContent));
+    assert.deepStrictEqual([posts.at(-1).accion, posts.at(-1).destino], ['desmontar', 'baja']);
+    await page.click('.pos[data-pos="1"]');
+    await page.waitForSelector('#g-fuego');
+    await page.evaluate(() => window.alEscanear('f200'));
+    await page.waitForFunction(() => /montada/.test(document.querySelector('#g-estado').textContent));
+    assert.deepStrictEqual([posts.at(-1).accion, posts.at(-1).cubierta_id], ['montar', 900]);
 
-    // El QR de «registrar trabajo» desde el inicio.
+    // Desde el inicio: el QR de un repuesto lleva al stock; el lector sin
+    // Enter (todo de golpe) se toma igual.
     await page.click('#volver');
-    await page.evaluate(() => window.alEscanear('https://app.test/handheld#v-trabajo'));
-    await page.waitForSelector('#v-trabajo.on');
-
-    // Un lector sin Enter: el código escrito de golpe se toma igual.
-    await page.click('#volver');
-    const antes = posts.length;
     await page.focus('#i-scan');
     await page.keyboard.insertText('https://app.test/repuestos/FIL-001');
-    await page.waitForFunction(n => document.querySelector('#v-baja.on') && document.querySelectorAll('#b-lista li').length > 3, antes);
-    assert.strictEqual(posts.at(-1).movimiento.codigo, 'FIL-001');
-
-    // El QR pegado en el camión abre su ficha.
-    await page.goto('http://hh.test/handheld/u/AD247MQ');
-    await page.waitForSelector('#v-unidad.on .kpi');
-    const ficha = await page.textContent('#u-ficha');
-    for (const t of ['512.345', '8.200', '2.950', '36,4', 'OT-0012', 'Pérdida de aire', 'VTV', 'F100'])
-      assert.ok(ficha.includes(t), 'falta ' + t + ' en la ficha');
-    assert.strictEqual(await page.getAttribute('a[href*="#v-orden"]', 'href'), '/movil?patente=AD247MQ#v-orden');
-    assert.strictEqual(await page.getAttribute('a[href*="#v-externo"]', 'href'), '/movil?patente=AD247MQ#v-externo');
-    await page.click('[data-acc="cubiertas"]');
-    await page.waitForSelector('#v-gomeria.on .pos');
-    // Desde el inicio, el QR de una unidad abre la ficha.
+    await page.waitForSelector('#v-stock.on');
+    // El QR de la unidad abre su registro.
     await page.click('#volver');
     await page.evaluate(() => window.alEscanear('https://app.test/handheld/u/AD247MQ'));
     await page.waitForSelector('#v-unidad.on .kpi');

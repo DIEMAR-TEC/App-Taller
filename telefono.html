@@ -287,9 +287,12 @@ window.addEventListener('popstate', () => ir(location.hash.slice(1) || 'v-inicio
 
 /* ---------------------------------------------------------------------- API */
 async function api(url, cuerpo) {
+  // credentials explícito: los WebView viejos (la handheld) no mandan la
+  // cookie de sesión en un fetch si no se les pide.
   const r = await fetch(url, cuerpo
-    ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cuerpo)}
-    : undefined);
+    ? {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'},
+       body: JSON.stringify(cuerpo)}
+    : {credentials: 'same-origin'});
   const d = await r.json().catch(() => ({error: 'El servidor respondió algo ilegible.'}));
   if (!r.ok) throw new Error(d.error || 'No se pudo completar la operación.');
   return d;
@@ -340,7 +343,8 @@ async function kmDelSatelital(patente, fecha, campo, ayuda) {
      pisarlo. */
   if (e.value && e.dataset.origen !== 'satelital') return;
   try {
-    const r = await fetch(`/api/odometro?patente=${encodeURIComponent(patente)}&fecha=${fecha}`);
+    const r = await fetch(`/api/odometro?patente=${encodeURIComponent(patente)}&fecha=${fecha}`,
+                          {credentials: 'same-origin'});
     const d = await r.json();
     if (d && d.km) {
       e.value = Math.round(d.km);
@@ -577,7 +581,7 @@ $('#x-guardar').onclick = async () => {
 /* -------------------------------------------------------------------- arranque */
 $('#o-fecha').value = hoy();
 $('#x-fecha').value = hoy();
-fetch('/api/yo').then(r => r.ok ? r.json() : null)
+fetch('/api/yo', {credentials: 'same-origin'}).then(r => r.ok ? r.json() : null)
   .then(d => { if (d) $('#quien').textContent = d.nombre; }).catch(() => {});
 cargarFlota();
 ir(location.hash.slice(1) || 'v-inicio', false);

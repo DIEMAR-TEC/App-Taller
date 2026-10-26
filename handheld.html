@@ -136,6 +136,11 @@ table.t td{padding:8px;border-top:1px solid var(--hairline,rgba(0,0,0,.08));vert
 table.t .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .chip{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:800;text-transform:uppercase;background:#e9eef4}
 .chip.mal{background:#bd303820;color:#8e1f26}.chip.aviso{background:#f0b42930;color:#7a5200}.chip.bien{background:#16834a20;color:#0f5c34}
+.portada{padding:16px;border-radius:12px;background:#14243a;color:#fff;margin-top:4px}
+.portada b{display:block;font-size:20px}
+.portada span{display:block;font-size:14px;opacity:.8;margin:2px 0 10px}
+.portada input{border-color:#fff}
+.portada .btn.alt{background:#ffffff1f;color:#fff;border-color:#ffffff55}
 .flash{position:fixed;inset:0;z-index:50;pointer-events:none;opacity:0;transition:opacity .35s}
 .flash.bien{background:#16834a;opacity:.35}
 .flash.mal{background:#bd3038;opacity:.45}
@@ -154,84 +159,61 @@ table.t .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums
 <main>
 
 <!-- -------------------------------------------------------------- inicio -->
-<section class="vista on" id="v-inicio" data-titulo="Titán Flota · Handheld">
-  <div class="escaner">
-    <input id="i-scan" class="scan" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Escanear un código">
-    <button class="btn chico alt" data-camara="i-scan">Cámara</button>
+<section class="vista on" id="v-inicio" data-titulo="Titán Flota">
+  <div class="portada">
+    <b>Escanear el QR de la unidad</b>
+    <span>Abre su registro: datos, gomería y stock.</span>
+    <div class="escaner">
+      <input id="i-scan" class="scan" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Patente o QR">
+      <button class="btn chico alt" data-camara="i-scan">Cámara</button>
+      <button class="btn chico alt" data-teclado="i-scan">⌨</button>
+    </div>
   </div>
   <div id="i-estado"></div>
   <div class="tiles">
-    <button class="tile" data-ir="v-baja">
-      <span class="ic">−</span>
-      <span><b>Baja de repuestos</b><span>Cada QR escaneado descuenta una unidad del stock.</span></span>
+    <button class="tile" data-ir="v-trabajo">
+      <span class="ic">◎</span>
+      <span><b>Movimiento de gomería</b><span>Escrito o dictado.</span></span>
     </button>
     <button class="tile" data-ir="v-stock">
       <span class="ic">±</span>
-      <span><b>Movimiento de stock</b><span>Entrada, salida o ajuste con cantidad.</span></span>
-    </button>
-    <button class="tile" data-ir="v-gomeria">
-      <span class="ic">◎</span>
-      <span><b>Gomería</b><span>Retirar y montar cubiertas por posición.</span></span>
-    </button>
-    <button class="tile" data-ir="v-unidad">
-      <span class="ic">▤</span>
-      <span><b>Ficha de la unidad</b><span>Historia, km, litros, cubiertas y órdenes.</span></span>
-    </button>
-    <button class="tile" data-ir="v-trabajo">
-      <span class="ic">✎</span>
-      <span><b>Registrar trabajo de gomería</b><span>Escrito o dictado; el sistema lo interpreta y se confirma.</span></span>
+      <span><b>Movimiento de stock</b><span>Repuestos que salen o entran.</span></span>
     </button>
   </div>
-</section>
-
-<!-- ------------------------------------------------------ baja de repuestos -->
-<section class="vista" id="v-baja" data-titulo="Baja de repuestos">
-  <label for="b-patente">Patente de destino</label>
-  <input id="b-patente" autocomplete="off" autocapitalize="characters" placeholder="AD247MQ">
-  <label class="check"><input type="checkbox" id="b-confirmar"> Confirmar cada baja</label>
-
-  <label for="b-scan">Código del repuesto</label>
-  <div class="escaner">
-    <input id="b-scan" class="scan" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Escanear">
-    <button class="btn chico alt" data-camara="b-scan" title="Cámara">Cámara</button>
-    <button class="btn chico alt" data-teclado="b-scan" title="Teclado">⌨</button>
-  </div>
-  <div id="b-estado"></div>
-  <div id="b-confirma" hidden></div>
-
-  <h2>Bajas registradas <span id="b-cuenta"></span></h2>
-  <ul class="lista" id="b-lista"></ul>
 </section>
 
 <!-- ---------------------------------------------------- movimiento de stock -->
 <section class="vista" id="v-stock" data-titulo="Movimiento de stock">
   <div class="seg" id="s-tipo">
-    <button data-tipo="Entrada" class="on">Entrada</button>
-    <button data-tipo="Salida">Salida</button>
+    <button data-tipo="Salida" class="on">Salida</button>
+    <button data-tipo="Entrada">Entrada</button>
     <button data-tipo="Ajuste">Ajuste</button>
   </div>
-  <label for="s-scan">Código del repuesto</label>
+  <div id="s-patente-caja">
+    <label for="s-patente">Unidad que recibe</label>
+    <input id="s-patente" autocomplete="off" autocapitalize="characters" placeholder="Patente o QR de la unidad">
+  </div>
+  <label for="s-scan">Repuesto</label>
   <div class="escaner">
     <input id="s-scan" class="scan" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Escanear">
     <button class="btn chico alt" data-camara="s-scan">Cámara</button>
     <button class="btn chico alt" data-teclado="s-scan">⌨</button>
   </div>
-  <div id="s-ficha"></div>
-  <div class="fila">
-    <div><label for="s-cantidad">Cantidad</label>
-      <input id="s-cantidad" type="number" inputmode="numeric" value="1"></div>
-    <div id="s-costo-caja"><label for="s-costo">Costo unitario</label>
-      <input id="s-costo" type="number" inputmode="decimal" step="0.01" placeholder="Opcional"></div>
-  </div>
-  <div id="s-patente-caja" hidden>
-    <label for="s-patente">Patente de destino</label>
-    <input id="s-patente" autocomplete="off" autocapitalize="characters" placeholder="AD247MQ">
-  </div>
-  <label for="s-obs">Observaciones</label>
-  <input id="s-obs" autocomplete="off" placeholder="Opcional">
-  <button class="btn" id="s-guardar" disabled>Registrar</button>
+  <p class="ayuda" id="s-ayuda">Cada repuesto escaneado sale de a uno para la unidad.</p>
   <div id="s-estado"></div>
-  <p style="font-size:13px;color:var(--ink-muted,#666)">En un ajuste, la cantidad negativa resta.</p>
+  <div id="s-confirma" hidden></div>
+  <div id="s-detalle" hidden>
+    <div id="s-ficha"></div>
+    <div class="fila">
+      <div><label for="s-cantidad">Cantidad</label>
+        <input id="s-cantidad" type="number" inputmode="numeric" value="1"></div>
+      <div id="s-costo-caja"><label for="s-costo">Costo unitario</label>
+        <input id="s-costo" type="number" inputmode="decimal" step="0.01" placeholder="Opcional"></div>
+    </div>
+    <button class="btn" id="s-guardar">Registrar</button>
+  </div>
+  <h2>Registrados <span id="s-cuenta"></span></h2>
+  <ul class="lista" id="s-lista"></ul>
 </section>
 
 <!-- ------------------------------------------- historia clínica de la unidad -->
@@ -247,7 +229,7 @@ table.t .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums
 </section>
 
 <!-- ------------------------------------------------- registrar trabajo -->
-<section class="vista" id="v-trabajo" data-titulo="Registrar trabajo">
+<section class="vista" id="v-trabajo" data-titulo="Movimiento de gomería">
   <label for="t-scan">Unidad (patente, interno o QR)</label>
   <div class="escaner">
     <input id="t-scan" class="scan" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Opcional si figura en el texto">
@@ -260,8 +242,9 @@ table.t .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums
     <button class="btn alt" id="t-dictar" hidden>🎤 Dictar</button>
     <button class="btn" id="t-interpretar">Interpretar</button>
   </div>
-  <p class="ayuda">Qué entra y qué sale, en qué eje y lado, con el número de fuego. Al terminar de dictar se interpreta solo; nada se guarda sin confirmar.</p>
+  <p class="ayuda">Qué entra y qué sale, en qué eje y lado, con el número de fuego. El dictado se agrega al texto; se puede dictar de nuevo para seguir. Nada se guarda sin confirmar.</p>
   <div id="t-salida"></div>
+  <button class="btn alt" id="t-posiciones">Retirar o montar por posición</button>
 </section>
 
 <!-- ------------------------------------------------------------- gomería -->
@@ -326,7 +309,7 @@ function ir(id, empujar = true) {
   $('#titulo').textContent = v.dataset.titulo;
   $('#volver').hidden = id === 'v-inicio';
   if (empujar && location.hash.slice(1) !== id) history.pushState({v: id}, '', '#' + id);
-  if (id === 'v-baja' || id === 'v-stock') cargarRepuestos();
+  if (id === 'v-stock') cargarRepuestos();
   enfocar();
 }
 document.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
@@ -347,12 +330,17 @@ document.addEventListener('click', e => {
 });
 
 /* ---------------------------------------------------------------------- API */
+/* credentials: 'same-origin' a propósito. Los WebView anteriores a Chrome 72
+   no mandan la cookie en un fetch si no se les pide, y el servidor contestaba
+   «sesión cerrada» con la sesión abierta. */
 async function api(url, cuerpo) {
   const r = await fetch(url, cuerpo
-    ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cuerpo)}
-    : {cache: 'no-store'});
+    ? {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'},
+       body: JSON.stringify(cuerpo)}
+    : {credentials: 'same-origin', cache: 'no-store'});
   const d = await r.json().catch(() => ({error: 'Respuesta ilegible del servidor.'}));
-  if (r.status === 401) { location.reload(); throw new Error('Sesión cerrada.'); }
+  /* La sesión venció de verdad: se guarda lo escrito y se vuelve a ingresar. */
+  if (r.status === 401) { guardarBorrador(); location.reload(); throw new Error('Sesión vencida.'); }
   if (!r.ok) throw new Error(d.error || 'No se pudo completar la operación.');
   return d;
 }
@@ -405,7 +393,6 @@ function escaneado(texto, campoId) {
     || (document.querySelector('.vista.on .scan') || {}).id;
   if (!id || !String(texto || '').trim()) return;
   const leido = leerCodigo(texto);
-  if (id === 'b-scan') return bajaEscaneada(leido);
   if (id === 's-scan') return stockEscaneado(leido);
   if (id === 'g-scan') return gomeriaEscaneada(leido);
   if (id === 'g-fuego') return montarEscaneada(leido);
@@ -414,16 +401,16 @@ function escaneado(texto, campoId) {
   if (id === 'u-scan') return unidadEscaneada(leido);
 }
 
-/* Desde el inicio, el código decide a dónde ir: el QR de un repuesto va a
-   la baja, el de una unidad o el de «registrar trabajo» al parte. */
+/* Desde el inicio: el QR o la patente de una unidad abre su registro; el
+   QR de un repuesto, el movimiento de stock. */
 async function inicioEscaneado(leido) {
   if (leido.tipo === 'trabajo') { pitido(true); return ir('v-trabajo'); }
   if (leido.tipo === 'unidad') { ir('v-unidad'); return cargarFicha(leido.valor); }
-  if (leido.tipo === 'repuesto') { ir('v-baja'); return bajaEscaneada(leido); }
+  if (leido.tipo === 'repuesto') { ir('v-stock'); return stockEscaneado(leido); }
   await cargarRepuestos();
-  if (articulo(leido.valor)) { ir('v-baja'); return bajaEscaneada(leido); }
-  pitido(false);
-  estado('#i-estado', 'mal', 'Código no reconocido', ': ' + leido.valor);
+  if (articulo(leido.valor)) { ir('v-stock'); return stockEscaneado(leido); }
+  ir('v-unidad');
+  cargarFicha(patente(leido.valor));
 }
 /* La app Android llama a esto cuando el lector avisa por broadcast. */
 window.alEscanear = texto => escaneado(texto);
@@ -435,17 +422,31 @@ document.addEventListener('keydown', e => {
   clearTimeout(t._pausa);
   const valor = t.value;
   t.value = '';
+  t._previo = 0;
   escaneado(valor, t.id);
 });
 /* El lector configurado sin Enter escribe el código de golpe y se detiene:
-   con el campo en modo lector, una pausa cierra la lectura. */
+   si los caracteres llegaron más rápido de lo que tipea una persona, una
+   pausa cierra la lectura. Lo tipeado a mano espera el Enter (la flecha
+   del teclado). */
 document.addEventListener('input', e => {
   const t = e.target;
-  if (!t.classList || !t.classList.contains('scan') || t.getAttribute('inputmode') !== 'none') return;
+  if (!t.classList || !t.classList.contains('scan')) return;
+  const ahora = Date.now();
+  const agregados = Math.max(0, t.value.length - (t._previo || 0));
+  t._previo = t.value.length;
+  if (!t._desde || ahora - t._ultima > 400) { t._desde = ahora; t._agregados = 0; }
+  t._agregados += agregados;
+  t._ultima = ahora;
   clearTimeout(t._pausa);
   t._pausa = setTimeout(() => {
     const valor = t.value;
-    if (valor.trim().length < 3) return;
+    // Milisegundos por carácter: el lector escribe en menos de 40; una
+    // persona tarda más de 100. Si todo entró de una vez, es el lector.
+    const ritmo = t._agregados > 1 ? (t._ultima - t._desde) / (t._agregados - 1) : 999;
+    t._desde = 0;
+    if (valor.trim().length < 3 || ritmo > 40) return;
+    t._previo = 0;
     t.value = '';
     escaneado(valor, t.id);
   }, 300);
@@ -526,7 +527,7 @@ async function cargarRepuestos(forzar = false) {
     });
     CARGADO = Date.now();
   } catch (e) {
-    estado(VISTA === 'v-stock' ? '#s-estado' : '#b-estado', 'mal', 'No se pudo leer el stock', ': ' + e.message);
+    estado('#s-estado', 'mal', 'No se pudo leer el stock', ': ' + e.message);
   }
 }
 async function registrar(mov) {
@@ -536,167 +537,165 @@ async function registrar(mov) {
   return d.id;
 }
 
-/* ---- baja directa */
-const BAJAS = [];
-try { $('#b-patente').value = localStorage.getItem('hh-patente') || ''; } catch (e) {}
-$('#b-patente').addEventListener('change', e => {
-  e.target.value = patente(e.target.value);
-  try { localStorage.setItem('hh-patente', e.target.value); } catch (e) {}
-});
-$('#b-patente').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); e.target.dispatchEvent(new Event('change')); $('#b-scan').focus(); }
-});
-
-async function bajaEscaneada(leido) {
-  if (leido.tipo === 'unidad') {
-    $('#b-patente').value = leido.valor;
-    $('#b-patente').dispatchEvent(new Event('change'));
-    pitido(true);
-    return estado('#b-estado', 'bien', 'Patente de destino: ' + leido.valor);
-  }
-  const pat = patente($('#b-patente').value);
-  if (!pat) {
-    pitido(false);
-    estado('#b-estado', 'mal', 'Falta la patente de destino', '. Cargarla o escanear el QR de la unidad.');
-    return $('#b-patente').focus();
-  }
-  await cargarRepuestos();
-  const art = articulo(leido.valor);
-  if (!art) {
-    pitido(false);
-    return estado('#b-estado', 'mal', 'Código no encontrado', ': ' + leido.valor);
-  }
-  const saldo = STOCK[art.codigo] || 0;
-  if ($('#b-confirmar').checked || saldo <= 0) return pedirConfirmacion(art, pat, saldo);
-  darDeBaja(art, pat);
-}
-
-function pedirConfirmacion(art, pat, saldo) {
-  const caja = $('#b-confirma');
-  caja.hidden = false;
-  caja.innerHTML = `<div class="ficha">
-      <div class="cod">${esc(art.codigo)}</div>
-      <div class="desc">${esc(art.descripcion)}</div>
-      <div class="stock">Stock: ${saldo} · Destino: ${esc(pat)}</div>
-      ${saldo <= 0 ? '<div class="estado aviso" style="margin-top:8px"><b>Sin stock registrado</b></div>' : ''}
-      <button class="btn" id="b-si">Dar de baja 1</button>
-      <button class="btn alt" id="b-no">Cancelar</button>
-    </div>`;
-  pitido(saldo > 0);
-  $('#b-si').onclick = () => { caja.hidden = true; darDeBaja(art, pat); };
-  $('#b-no').onclick = () => { caja.hidden = true; enfocar(); };
-}
-
-async function darDeBaja(art, pat) {
-  const fila = {art, pat, hora: hora(), id: null, estado: 'enviando'};
-  BAJAS.unshift(fila);
-  pintarBajas();
-  try {
-    fila.id = await registrar({codigo: art.codigo, tipo: 'Salida', cantidad: 1, fecha: hoy(),
-                               patente: pat, obs: 'Baja por escaneo (handheld)'});
-    fila.estado = 'ok';
-    pitido(true);
-    estado('#b-estado', 'bien', 'Baja registrada: ' + art.codigo,
-           ` · ${art.descripcion} · queda ${STOCK[art.codigo]}`);
-  } catch (e) {
-    fila.estado = 'error';
-    pitido(false);
-    estado('#b-estado', 'mal', 'No se registró ' + art.codigo, ': ' + e.message);
-  }
-  pintarBajas();
-  enfocar();
-}
-
-function pintarBajas() {
-  const ok = BAJAS.filter(b => b.estado === 'ok').length;
-  $('#b-cuenta').textContent = ok ? `(${ok})` : '';
-  $('#b-lista').innerHTML = BAJAS.map((b, i) => `
-    <li class="${b.estado === 'anulada' ? 'anulado' : ''}">
-      <div class="txt"><b>${esc(b.art.codigo)}</b>
-        <span>${esc(b.art.descripcion)} · ${esc(b.pat)} · ${b.hora}
-        ${b.estado === 'enviando' ? ' · enviando' : b.estado === 'error' ? ' · no registrada' : ''}</span></div>
-      ${b.estado === 'ok' && PUEDE_GESTIONAR ? `<button data-anular="${i}">Anular</button>` : ''}
-    </li>`).join('');
-}
-$('#b-lista').addEventListener('click', async e => {
-  const b = e.target.closest('[data-anular]');
-  if (!b) return;
-  const fila = BAJAS[+b.dataset.anular];
-  if (!confirm(`Anular la baja de ${fila.art.codigo}?`)) return;
-  try {
-    await api('/api/repuestos', {op: 'movimiento_borrar', id: fila.id});
-    fila.estado = 'anulada';
-    STOCK[fila.art.codigo] = (STOCK[fila.art.codigo] || 0) + 1;
-    estado('#b-estado', 'bien', 'Baja anulada: ' + fila.art.codigo);
-  } catch (err) {
-    estado('#b-estado', 'mal', 'No se pudo anular', ': ' + err.message);
-  }
-  pintarBajas();
-  enfocar();
-});
-
-/* ---- movimiento con cantidad */
-let TIPO = 'Entrada';
+/* ---- movimiento de stock
+   Salida: cada repuesto escaneado sale de a uno para la unidad, al
+   instante. Entrada y ajuste: se escanea, se pone la cantidad y se
+   registra. */
+const MOVS = [];
+let TIPO = 'Salida';
 let ART_STOCK = null;
+
+$('#s-patente').addEventListener('change', e => { e.target.value = patente(leerCodigo(e.target.value).valor); });
+$('#s-patente').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.keyCode === 13) {
+    e.preventDefault(); e.target.dispatchEvent(new Event('change')); $('#s-scan').focus();
+  }
+});
+
+function tipoStock(tipo) {
+  TIPO = tipo;
+  document.querySelectorAll('#s-tipo button').forEach(x => x.classList.toggle('on', x.dataset.tipo === tipo));
+  $('#s-patente-caja').hidden = tipo !== 'Salida';
+  $('#s-ayuda').textContent = tipo === 'Salida'
+    ? 'Cada repuesto escaneado sale de a uno para la unidad.'
+    : tipo === 'Entrada' ? 'Escanear el repuesto y cargar la cantidad que entra.'
+    : 'Escanear el repuesto y cargar la diferencia; negativa resta.';
+  $('#s-detalle').hidden = true;
+  $('#s-confirma').hidden = true;
+  ART_STOCK = null;
+  enfocar();
+}
 $('#s-tipo').addEventListener('click', e => {
   const b = e.target.closest('[data-tipo]');
-  if (!b) return;
-  TIPO = b.dataset.tipo;
-  document.querySelectorAll('#s-tipo button').forEach(x => x.classList.toggle('on', x === b));
-  $('#s-patente-caja').hidden = TIPO !== 'Salida';
-  $('#s-costo-caja').hidden = TIPO === 'Salida';
-  enfocar();
+  if (b) tipoStock(b.dataset.tipo);
 });
+
 async function stockEscaneado(leido) {
   if (leido.tipo === 'unidad') {
     $('#s-patente').value = leido.valor;
     pitido(true);
-    return estado('#s-estado', 'bien', 'Patente de destino: ' + leido.valor);
+    return estado('#s-estado', 'bien', 'Unidad: ' + leido.valor);
   }
   await cargarRepuestos();
   const art = articulo(leido.valor);
   if (!art) {
-    ART_STOCK = null;
-    $('#s-guardar').disabled = true;
-    $('#s-ficha').innerHTML = '';
     pitido(false);
     return estado('#s-estado', 'mal', 'Código no encontrado', ': ' + leido.valor);
   }
-  ART_STOCK = art;
-  pitido(true);
-  $('#s-estado').innerHTML = '';
-  $('#s-ficha').innerHTML = `<div class="ficha"><div class="cod">${esc(art.codigo)}</div>
-    <div class="desc">${esc(art.descripcion)}</div>
-    <div class="stock">Stock: ${STOCK[art.codigo] || 0} · ${esc(art.rubro || '')}</div></div>`;
-  $('#s-guardar').disabled = false;
-  $('#s-cantidad').focus();
-  $('#s-cantidad').select();
+  if (TIPO !== 'Salida') {
+    ART_STOCK = art;
+    pitido(true);
+    $('#s-estado').innerHTML = '';
+    $('#s-ficha').innerHTML = `<div class="ficha"><div class="cod">${esc(art.codigo)}</div>
+      <div class="desc">${esc(art.descripcion)}</div>
+      <div class="stock">Stock: ${STOCK[art.codigo] || 0}</div></div>`;
+    $('#s-costo-caja').hidden = TIPO !== 'Entrada';
+    $('#s-detalle').hidden = false;
+    $('#s-cantidad').focus();
+    $('#s-cantidad').select();
+    return;
+  }
+  const pat = patente($('#s-patente').value);
+  if (!pat) {
+    pitido(false);
+    estado('#s-estado', 'mal', 'Falta la unidad que recibe', '. Escanear su QR o escribir la patente.');
+    return $('#s-patente').focus();
+  }
+  const saldo = STOCK[art.codigo] || 0;
+  if (saldo <= 0) return pedirConfirmacion(art, pat, saldo);
+  darSalida(art, pat);
 }
+
+function pedirConfirmacion(art, pat, saldo) {
+  const caja = $('#s-confirma');
+  caja.hidden = false;
+  caja.innerHTML = `<div class="ficha">
+      <div class="cod">${esc(art.codigo)}</div>
+      <div class="desc">${esc(art.descripcion)}</div>
+      <div class="estado aviso" style="margin-top:8px"><b>Sin stock registrado</b>Stock: ${saldo} · Unidad: ${esc(pat)}</div>
+      <button class="btn" id="s-si">Registrar salida de 1</button>
+      <button class="btn alt" id="s-no">Cancelar</button>
+    </div>`;
+  pitido(false);
+  $('#s-si').onclick = () => { caja.hidden = true; darSalida(art, pat); };
+  $('#s-no').onclick = () => { caja.hidden = true; enfocar(); };
+}
+
+async function darSalida(art, pat) {
+  const fila = {art, pat, tipo: 'Salida', cantidad: 1, hora: hora(), id: null, estado: 'enviando'};
+  MOVS.unshift(fila);
+  pintarMovs();
+  try {
+    fila.id = await registrar({codigo: art.codigo, tipo: 'Salida', cantidad: 1, fecha: hoy(),
+                               patente: pat, obs: 'Salida por escaneo (handheld)'});
+    fila.estado = 'ok';
+    pitido(true);
+    estado('#s-estado', 'bien', 'Salida registrada: ' + art.codigo,
+           ` · ${art.descripcion} · ${pat} · queda ${STOCK[art.codigo]}`);
+  } catch (e) {
+    fila.estado = 'error';
+    pitido(false);
+    estado('#s-estado', 'mal', 'No se registró ' + art.codigo, ': ' + e.message);
+  }
+  pintarMovs();
+  enfocar();
+}
+
 $('#s-guardar').onclick = async () => {
   if (!ART_STOCK) return;
   const boton = $('#s-guardar');
-  const mov = {codigo: ART_STOCK.codigo, tipo: TIPO, cantidad: parseInt($('#s-cantidad').value, 10),
-               fecha: hoy(), obs: $('#s-obs').value.trim() || 'Handheld'};
-  if (TIPO === 'Salida') mov.patente = patente($('#s-patente').value);
-  if (TIPO !== 'Salida' && $('#s-costo').value !== '') mov.costo_unitario = $('#s-costo').value;
+  const art = ART_STOCK;
+  const mov = {codigo: art.codigo, tipo: TIPO, cantidad: parseInt($('#s-cantidad').value, 10),
+               fecha: hoy(), obs: 'Handheld'};
+  if (TIPO === 'Entrada' && $('#s-costo').value !== '') mov.costo_unitario = $('#s-costo').value;
   boton.disabled = true;
   try {
-    await registrar(mov);
+    const id = await registrar(mov);
+    MOVS.unshift({art, pat: '', tipo: TIPO, cantidad: mov.cantidad, hora: hora(), id, estado: 'ok'});
     pitido(true);
-    estado('#s-estado', 'bien', `${TIPO} registrada: ${ART_STOCK.codigo}`,
-           ` · ${mov.cantidad} u. · stock ${STOCK[ART_STOCK.codigo]}`);
+    estado('#s-estado', 'bien', `${TIPO} registrada: ${art.codigo}`,
+           ` · ${mov.cantidad} u. · stock ${STOCK[art.codigo]}`);
     ART_STOCK = null;
-    $('#s-ficha').innerHTML = '';
+    $('#s-detalle').hidden = true;
     $('#s-cantidad').value = 1;
     $('#s-costo').value = '';
-    $('#s-obs').value = '';
+    pintarMovs();
   } catch (e) {
     pitido(false);
     estado('#s-estado', 'mal', 'No se registró', ': ' + e.message);
-    boton.disabled = false;
   }
+  boton.disabled = false;
   enfocar();
 };
+
+function pintarMovs() {
+  const ok = MOVS.filter(b => b.estado === 'ok').length;
+  $('#s-cuenta').textContent = ok ? `(${ok})` : '';
+  $('#s-lista').innerHTML = MOVS.map((b, i) => `
+    <li class="${b.estado === 'anulada' ? 'anulado' : ''}">
+      <div class="txt"><b>${esc(b.tipo)} ${b.cantidad} · ${esc(b.art.codigo)}</b>
+        <span>${esc(b.art.descripcion)}${b.pat ? ' · ' + esc(b.pat) : ''} · ${b.hora}
+        ${b.estado === 'enviando' ? ' · enviando' : b.estado === 'error' ? ' · no registrado' : ''}</span></div>
+      ${b.estado === 'ok' && PUEDE_GESTIONAR ? `<button data-anular="${i}">Anular</button>` : ''}
+    </li>`).join('');
+}
+$('#s-lista').addEventListener('click', async e => {
+  const b = e.target.closest('[data-anular]');
+  if (!b) return;
+  const fila = MOVS[+b.dataset.anular];
+  if (!confirm(`Anular ${fila.tipo.toLowerCase()} de ${fila.art.codigo}?`)) return;
+  try {
+    await api('/api/repuestos', {op: 'movimiento_borrar', id: fila.id});
+    fila.estado = 'anulada';
+    const c = Number(fila.cantidad);
+    STOCK[fila.art.codigo] = (STOCK[fila.art.codigo] || 0) + (fila.tipo === 'Salida' ? c : -c);
+    estado('#s-estado', 'bien', 'Anulado: ' + fila.art.codigo);
+  } catch (err) {
+    estado('#s-estado', 'mal', 'No se pudo anular', ': ' + err.message);
+  }
+  pintarMovs();
+  enfocar();
+});
 
 /* ----------------------------------------------------------------- gomería */
 let UNIDAD = null, MAPA = [], POS = null;
@@ -871,8 +870,8 @@ function pintarFicha() {
     <span>${esc([u.chofer && 'Chofer: ' + u.chofer, u.sucursal, u.semi && 'Semi: ' + u.semi].filter(Boolean).join(' · '))}</span></div>
 
   <div class="acciones">
-    <button class="btn" data-acc="cubiertas">Cubiertas</button>
-    <button class="btn" data-acc="trabajo">Registrar trabajo</button>
+    <button class="btn" data-acc="trabajo">Movimiento de gomería</button>
+    <button class="btn" data-acc="stock">Movimiento de stock</button>
     <a class="btn alt" href="/movil?patente=${q}#v-orden">Orden interna</a>
     <a class="btn alt" href="/movil?patente=${q}#v-externo">Servicio externo</a>
   </div>
@@ -925,8 +924,8 @@ $('#u-ficha').addEventListener('click', e => {
   const b = e.target.closest('[data-acc]');
   if (!b || !FICHA) return;
   const pat = FICHA.unidad.patente;
-  if (b.dataset.acc === 'cubiertas') { ir('v-gomeria'); cargarUnidad(pat); }
   if (b.dataset.acc === 'trabajo') { ir('v-trabajo'); trabajoEscaneado({tipo: 'unidad', valor: pat}); }
+  if (b.dataset.acc === 'stock') { ir('v-stock'); tipoStock('Salida'); $('#s-patente').value = pat; }
 });
 
 /* ------------------------------------------------------- registrar trabajo */
@@ -975,6 +974,27 @@ async function interpretarParte() {
   }
 }
 $('#t-interpretar').onclick = interpretarParte;
+$('#t-posiciones').onclick = () => {
+  ir('v-gomeria');
+  if (T_PATENTE) cargarUnidad(T_PATENTE);
+};
+
+/* Lo escrito o dictado se guarda en el equipo mientras no se confirme: si la
+   página se recarga (sesión vencida, corte de conexión) no se pierde. */
+function guardarBorrador() {
+  try { localStorage.setItem('hh-borrador', JSON.stringify({texto: $('#t-texto').value, patente: T_PATENTE})); } catch (e) {}
+}
+function borrarBorrador() {
+  try { localStorage.removeItem('hh-borrador'); } catch (e) {}
+}
+$('#t-texto').addEventListener('input', guardarBorrador);
+try {
+  const b = JSON.parse(localStorage.getItem('hh-borrador') || 'null');
+  if (b && b.texto) {
+    $('#t-texto').value = b.texto;
+    if (b.patente) { T_PATENTE = b.patente; $('#t-scan').placeholder = b.patente; }
+  }
+} catch (e) {}
 
 async function confirmarParte() {
   const boton = $('#t-confirmar');
@@ -985,6 +1005,7 @@ async function confirmarParte() {
     $('#t-salida').innerHTML = '<div class="estado bien"><b>Movimiento guardado</b>' +
       (d.hecho || []).map(esc).join('<br>') + '</div>';
     $('#t-texto').value = '';
+    borrarBorrador();
     PARTE = null;
   } catch (e) {
     pitido(false);
@@ -1006,17 +1027,21 @@ const VOZ_WEB = window.SpeechRecognition || window.webkitSpeechRecognition;
 const VOZ_APP = window.TitanApp && typeof TitanApp.dictar === 'function';
 if (VOZ_APP || VOZ_WEB) $('#t-dictar').hidden = false;
 
+/* El dictado se suma a lo que ya había. No se interpreta solo: el
+   reconocedor corta en cada pausa, y así se puede seguir dictando y
+   corregir antes de mandar. */
 function dictado(texto) {
   const caja = $('#t-texto');
   caja.value = (caja.value.trim() ? caja.value.trim() + ' ' : '') + texto;
+  guardarBorrador();
   $('#t-dictar').classList.remove('grabando');
-  $('#t-dictar').textContent = '🎤 Dictar';
-  interpretarParte();
+  $('#t-dictar').textContent = '🎤 Seguir dictando';
+  pitido(true);
 }
 window.alDictar = dictado;
 window.alDictarError = msg => {
   $('#t-dictar').classList.remove('grabando');
-  $('#t-dictar').textContent = '🎤 Dictar';
+  $('#t-dictar').textContent = $('#t-texto').value.trim() ? '🎤 Seguir dictando' : '🎤 Dictar';
   pitido(false);
   estado('#t-salida', 'mal', 'Dictado', ': ' + msg);
 };
@@ -1032,20 +1057,27 @@ $('#t-dictar').onclick = () => {
   RECONOCEDOR = new VOZ_WEB();
   RECONOCEDOR.lang = 'es-AR';
   RECONOCEDOR.interimResults = false;
+  RECONOCEDOR.continuous = true;
   RECONOCEDOR.onresult = e => dictado(Array.from(e.results).map(r => r[0].transcript).join(' '));
   RECONOCEDOR.onerror = e => window.alDictarError(e.error || 'sin audio');
-  RECONOCEDOR.onend = () => { b.classList.remove('grabando'); b.textContent = '🎤 Dictar'; };
+  RECONOCEDOR.onend = () => {
+    b.classList.remove('grabando');
+    b.textContent = $('#t-texto').value.trim() ? '🎤 Seguir dictando' : '🎤 Dictar';
+  };
   RECONOCEDOR.start();
 };
 
 /* ------------------------------------------------------------------ inicio */
-fetch('/api/yo').then(r => r.ok ? r.json() : null).then(d => {
+fetch('/api/yo', {credentials: 'same-origin'}).then(r => r.ok ? r.json() : null).then(d => {
   if (!d) return;
   YO = d;
   $('#quien').textContent = d.nombre || d.usuario || '';
 }).catch(() => {});
 const DESDE_QR = location.pathname.match(/^\/handheld\/u\/([^/]+)/);
-if (DESDE_QR) {
+/* Desde el QR se abre la ficha; salvo que se recargue estando en otra
+   pantalla (sesión vencida a mitad de un parte): ahí se vuelve a esa. */
+const VOLVER_A = location.hash.slice(1);
+if (DESDE_QR && !(VOLVER_A && VOLVER_A !== 'v-unidad' && document.getElementById(VOLVER_A))) {
   ir('v-unidad', false);
   cargarFicha(patente(decodeURIComponent(DESDE_QR[1])));
 } else {
