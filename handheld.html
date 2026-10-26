@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14243a">
+<title>Handheld | Titán Flota</title>
+<!--
+  La pantalla de la terminal con lector (handheld) del depósito y la gomería.
+
+  Tres cosas, las que se hacen parado frente al estante o al camión:
+    - Baja de repuestos: se fija la patente que recibe y cada QR que se
+      escanea es una salida de una unidad, sin más pasos.
+    - Movimiento de stock: entrada, salida o ajuste con cantidad.
+    - Gomería: la unidad, sus posiciones, retirar y montar cubiertas.
+
+  El código entra de tres maneras y las tres terminan en la misma función
+  (escaneado):
+    1. El lector de la terminal en modo teclado: escribe el código en el
+       campo enfocado y manda Enter.
+    2. El lector por aviso del sistema (broadcast): la app Android lo
+       recibe y llama a window.alEscanear(texto).
+    3. La cámara, con BarcodeDetector si el navegador lo trae o jsQR si no.
+
+  No tiene API propia: usa las mismas que Repuestos y Gomería, con los
+  mismos permisos. La APK de android/ abre esta dirección.
+-->
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{background:var(--plane,#f2f5f8);color:var(--ink,#121212);
+  font-family:Inter,system-ui,-apple-system,sans-serif;font-size:16px}
+header.hh{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:10px;
+  padding:8px 12px;padding-top:max(8px,env(safe-area-inset-top));
+  background:#14243a;color:#fff}
+header.hh button.volver{border:0;background:#ffffff1f;color:#fff;border-radius:8px;
+  padding:8px 12px;font:inherit;font-size:14px;font-weight:700}
+header.hh .titulo{flex:1;min-width:0;font-weight:800;font-size:15px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+header.hh .quien{font-size:12px;opacity:.8;max-width:34vw;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+header.hh a{color:#fff;opacity:.8;font-size:12px;text-decoration:none}
+main{max-width:560px;margin:0 auto;padding:12px;padding-bottom:max(24px,env(safe-area-inset-bottom))}
+.vista{display:none}.vista.on{display:block}
+.tiles{display:grid;gap:12px;margin-top:6px}
+.tile{display:flex;align-items:center;gap:14px;width:100%;padding:20px 16px;text-align:left;
+  border:1px solid var(--hairline,rgba(0,0,0,.1));border-radius:12px;background:var(--surface-1,#fff);
+  color:inherit;font:inherit;cursor:pointer}
+.tile:active{background:var(--surface-2,#e9eef4)}
+.tile .ic{flex:none;width:48px;height:48px;border-radius:12px;display:grid;place-items:center;
+  background:var(--brand,#2563eb);color:#fff;font-size:24px;font-weight:800}
+.tile b{display:block;font-size:18px}
+.tile span{color:var(--ink-muted,#666);font-size:13px}
+label{display:block;margin:12px 0 5px;font-size:12px;font-weight:800;letter-spacing:.6px;
+  text-transform:uppercase;color:var(--ink-muted,#666)}
+input,select,textarea{width:100%;padding:13px 12px;font:inherit;font-size:17px;
+  border:1px solid var(--hairline-2,rgba(0,0,0,.2));border-radius:10px;
+  background:var(--surface-1,#fff);color:inherit}
+input:focus,select:focus,textarea:focus{outline:2px solid #2563eb;outline-offset:0}
+.fila{display:flex;gap:8px;align-items:stretch}
+.fila>*{flex:1;min-width:0}
+.fila>.chico{flex:none}
+.escaner{display:flex;gap:8px;margin-top:6px}
+.escaner input{flex:1;font-size:19px;font-weight:700;letter-spacing:.5px;border-width:2px;border-color:#2563eb}
+.btn{display:block;width:100%;margin-top:14px;padding:15px 14px;font:inherit;font-size:17px;font-weight:800;
+  border:1px solid transparent;border-radius:10px;background:var(--brand,#2563eb);color:#fff;cursor:pointer}
+.btn:disabled{opacity:.5}
+.btn.alt{background:var(--surface-1,#fff);color:inherit;border-color:var(--hairline-2,rgba(0,0,0,.2))}
+.btn.peligro{background:#bd3038}
+.btn.chico{width:auto;margin:0;padding:0 14px;font-size:15px}
+.seg{display:flex;gap:6px;margin-top:4px}
+.seg button{flex:1;padding:12px 6px;font:inherit;font-weight:800;border-radius:10px;cursor:pointer;
+  border:1px solid var(--hairline-2,rgba(0,0,0,.2));background:var(--surface-1,#fff);color:inherit}
+.seg button.on{background:#14243a;color:#fff;border-color:#14243a}
+.check{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:15px;font-weight:600;
+  text-transform:none;letter-spacing:0;color:inherit}
+.check input{width:22px;height:22px}
+.estado{margin-top:12px;padding:14px;border-radius:10px;font-size:16px;line-height:1.4;
+  border:1px solid var(--hairline,rgba(0,0,0,.1));background:var(--surface-1,#fff)}
+.estado.bien{border-color:#16834a;background:#16834a14;color:#0f5c34}
+.estado.mal{border-color:#bd3038;background:#bd303814;color:#8e1f26}
+.estado.aviso{border-color:#c98a04;background:#f0b42918;color:#7a5200}
+.estado b{display:block;font-size:18px}
+.ficha{margin-top:12px;padding:14px;border-radius:10px;background:var(--surface-1,#fff);
+  border:1px solid var(--hairline,rgba(0,0,0,.1))}
+.ficha .cod{font-size:20px;font-weight:800}
+.ficha .desc{margin-top:2px}
+.ficha .stock{margin-top:6px;font-size:14px;color:var(--ink-muted,#666)}
+h2{margin:18px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink-muted,#666)}
+ul.lista{list-style:none;margin:0;padding:0}
+ul.lista li{display:flex;align-items:center;gap:10px;padding:11px 12px;margin-bottom:6px;border-radius:10px;
+  background:var(--surface-1,#fff);border:1px solid var(--hairline,rgba(0,0,0,.1))}
+ul.lista li .txt{flex:1;min-width:0}
+ul.lista li .txt b{display:block}
+ul.lista li .txt span{font-size:13px;color:var(--ink-muted,#666)}
+ul.lista li.anulado{opacity:.5;text-decoration:line-through}
+ul.lista li button{padding:9px 11px;font:inherit;font-size:13px;font-weight:700;border-radius:8px;
+  border:1px solid var(--hairline-2,rgba(0,0,0,.2));background:var(--surface-1,#fff);color:inherit}
+.unidad{margin-top:12px;font-size:20px;font-weight:800}
+.unidad span{display:block;font-size:13px;font-weight:400;color:var(--ink-muted,#666)}
+.posiciones{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+.pos{padding:12px;border-radius:10px;text-align:left;font:inherit;cursor:pointer;color:inherit;
+  border:1px solid var(--hairline-2,rgba(0,0,0,.2));background:var(--surface-1,#fff)}
+.pos.vacia{border-style:dashed;background:transparent;color:var(--ink-muted,#666)}
+.pos.on{outline:3px solid #2563eb}
+.pos small{display:block;font-size:11px;font-weight:800;letter-spacing:.6px;color:var(--ink-muted,#666)}
+.pos b{display:block;font-size:16px;margin-top:2px}
+.pos span{font-size:12px;color:var(--ink-muted,#666)}
+.hoja{margin-top:12px;padding:14px;border-radius:12px;background:var(--surface-1,#fff);
+  border:2px solid #2563eb}
+.camara{position:fixed;inset:0;z-index:40;background:#000;display:flex;flex-direction:column}
+.camara video{flex:1;width:100%;object-fit:cover;min-height:0}
+.camara .marco{position:absolute;left:50%;top:42%;width:64vw;height:64vw;max-width:340px;max-height:340px;
+  transform:translate(-50%,-50%);border:3px solid #fff;border-radius:16px;box-shadow:0 0 0 999px #0007}
+.camara .pie{padding:14px;padding-bottom:max(14px,env(safe-area-inset-bottom));background:#000}
+.flash{position:fixed;inset:0;z-index:50;pointer-events:none;opacity:0;transition:opacity .35s}
+.flash.bien{background:#16834a;opacity:.35}
+.flash.mal{background:#bd3038;opacity:.45}
+</style>
+</head>
+<body>
+
+<header class="hh">
+  <button class="volver" id="volver" hidden>‹ Inicio</button>
+  <span class="titulo" id="titulo">Titán Flota · Handheld</span>
+  <span class="quien" id="quien"></span>
+  <a href="/salir">Salir</a>
+</header>
+<div class="flash" id="flash"></div>
+
+<main>
+
+<!-- -------------------------------------------------------------- inicio -->
+<section class="vista on" id="v-inicio" data-titulo="Titán Flota · Handheld">
+  <div class="tiles">
+    <button class="tile" data-ir="v-baja">
+      <span class="ic">−</span>
+      <span><b>Baja de repuestos</b><span>Cada QR escaneado descuenta una unidad del stock.</span></span>
+    </button>
+    <button class="tile" data-ir="v-stock">
+      <span class="ic">±</span>
+      <span><b>Movimiento de stock</b><span>Entrada, salida o ajuste con cantidad.</span></span>
+    </button>
+    <button class="tile" data-ir="v-gomeria">
+      <span class="ic">◎</span>
+      <span><b>Gomería</b><span>Retirar y montar cubiertas por posición.</span></span>
+    </button>
+  </div>
+  <button class="btn alt" id="servidor" hidden>Dirección del servidor</button>
+</section>
+
+<!-- ------------------------------------------------------ baja de repuestos -->
+<section class="vista" id="v-baja" data-titulo="Baja de repuestos">
+  <label for="b-patente">Patente de destino</label>
+  <input id="b-patente" autocomplete="off" autocapitalize="characters" placeholder="AD247MQ">
+  <label class="check"><input type="checkbox" id="b-confirmar"> Confirmar cada baja</label>
+
+  <label for="b-scan">Código del repuesto</label>
+  <div class="escaner">
+    <input id="b-scan" class="scan" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Escanear">
+    <button class="btn chico alt" data-camara="b-scan" title="Cámara">Cámara</button>
+    <button class="btn chico alt" data-teclado="b-scan" title="Teclado">⌨</button>
+  </div>
+  <div id="b-estado"></div>
+  <div id="b-confirma" hidden></div>
+
+  <h2>Bajas registradas <span id="b-cuenta"></span></h2>
+  <ul class="lista" id="b-lista"></ul>
+</section>
+
+<!-- ---------------------------------------------------- movimiento de stock -->
+<section class="vista" id="v-stock" data-titulo="Movimiento de stock">
+  <div class="seg" id="s-tipo">
+    <button data-tipo="Entrada" class="on">Entrada</button>
+    <button data-tipo="Salida">Salida</button>
+    <button data-tipo="Ajuste">Ajuste</button>
+  </div>
+  <label for="s-scan">Código del repuesto</label>
+  <div class="escaner">
+    <input id="s-scan" class="scan" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Escanear">
+    <button class="btn chico alt" data-camara="s-scan">Cámara</button>
+    <button class="btn chico alt" data-teclado="s-scan">⌨</button>
+  </div>
+  <div id="s-ficha"></div>
+  <div class="fila">
+    <div><label for="s-cantidad">Cantidad</label>
+      <input id="s-cantidad" type="number" inputmode="numeric" value="1"></div>
+    <div id="s-costo-caja"><label for="s-costo">Costo unitario</label>
+      <input id="s-costo" type="number" inputmode="decimal" step="0.01" placeholder="Opcional"></div>
+  </div>
+  <div id="s-patente-caja" hidden>
+    <label for="s-patente">Patente de destino</label>
+    <input id="s-patente" autocomplete="off" autocapitalize="characters" placeholder="AD247MQ">
+  </div>
+  <label for="s-obs">Observaciones</label>
+  <input id="s-obs" autocomplete="off" placeholder="Opcional">
+  <button class="btn" id="s-guardar" disabled>Registrar</button>
+  <div id="s-estado"></div>
+  <p style="font-size:13px;color:var(--ink-muted,#666)">En un ajuste, la cantidad negativa resta.</p>
+</section>
+
+<!-- ------------------------------------------------------------- gomería -->
+<section class="vista" id="v-gomeria" data-titulo="Gomería">
+  <label for="g-scan">Unidad (patente, interno o QR)</label>
+  <div class="escaner">
+    <input id="g-scan" class="scan" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Escanear">
+    <button class="btn chico alt" data-camara="g-scan">Cámara</button>
+    <button class="btn chico alt" data-teclado="g-scan">⌨</button>
+  </div>
+  <div id="g-estado"></div>
+  <div id="g-unidad"></div>
+  <div class="posiciones" id="g-posiciones"></div>
+  <div class="hoja" id="g-hoja" hidden></div>
+</section>
+
+</main>
+
+<div class="camara" id="camara" hidden>
+  <video id="cam-video" playsinline muted></video>
+  <div class="marco"></div>
+  <div class="pie"><button class="btn alt" id="cam-cerrar">Cerrar cámara</button></div>
+</div>
+
+<script src="/vendor/jsQR.js" defer></script>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hoy = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const patente = t => String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const hora = () => new Date().toLocaleTimeString('es-AR', {hour: '2-digit', minute: '2-digit', hour12: false});
+
+let YO = {};
+let ARTS = [];          // artículos de repuestos
+let STOCK = {};         // codigo -> saldo
+let PUEDE_GESTIONAR = false;
+
+/* --------------------------------------------------------------- navegación */
+let VISTA = 'v-inicio';
+function ir(id, empujar = true) {
+  VISTA = id;
+  document.querySelectorAll('.vista').forEach(v => v.classList.toggle('on', v.id === id));
+  const v = document.getElementById(id);
+  $('#titulo').textContent = v.dataset.titulo;
+  $('#volver').hidden = id === 'v-inicio';
+  if (empujar && location.hash.slice(1) !== id) history.pushState({v: id}, '', '#' + id);
+  if (id === 'v-baja' || id === 'v-stock') cargarRepuestos();
+  enfocar();
+}
+document.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
+$('#volver').onclick = () => ir('v-inicio');
+window.addEventListener('popstate', () => ir(location.hash.slice(1) || 'v-inicio', false));
+
+/* El campo de escaneo de la vista queda siempre enfocado, salvo que se esté
+   escribiendo en otro: el lector en modo teclado escribe donde está el foco. */
+function enfocar() {
+  const campo = document.querySelector('.vista.on .scan');
+  const activo = document.activeElement;
+  if (!campo) return;
+  if (activo && activo !== campo && /INPUT|SELECT|TEXTAREA/.test(activo.tagName)) return;
+  campo.focus({preventScroll: true});
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('input,select,textarea,button')) setTimeout(enfocar, 0);
+});
+
+/* ---------------------------------------------------------------------- API */
+async function api(url, cuerpo) {
+  const r = await fetch(url, cuerpo
+    ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cuerpo)}
+    : {cache: 'no-store'});
+  const d = await r.json().catch(() => ({error: 'Respuesta ilegible del servidor.'}));
+  if (r.status === 401) { location.reload(); throw new Error('Sesión cerrada.'); }
+  if (!r.ok) throw new Error(d.error || 'No se pudo completar la operación.');
+  return d;
+}
+
+/* ------------------------------------------------------- sonido y vibración */
+let AUDIO;
+function pitido(ok) {
+  try {
+    AUDIO = AUDIO || new (window.AudioContext || window.webkitAudioContext)();
+    const o = AUDIO.createOscillator(), g = AUDIO.createGain();
+    o.frequency.value = ok ? 1500 : 220;
+    o.type = ok ? 'sine' : 'square';
+    g.gain.value = .15;
+    o.connect(g); g.connect(AUDIO.destination);
+    o.start(); o.stop(AUDIO.currentTime + (ok ? .12 : .45));
+  } catch {}
+  try { navigator.vibrate && navigator.vibrate(ok ? 60 : [200, 80, 200]); } catch {}
+  const f = $('#flash');
+  f.className = 'flash ' + (ok ? 'bien' : 'mal');
+  setTimeout(() => f.className = 'flash', 250);
+}
+function estado(donde, tipo, titulo, detalle = '') {
+  $(donde).innerHTML = `<div class="estado ${tipo}"><b>${esc(titulo)}</b>${esc(detalle)}</div>`;
+}
+
+/* ------------------------------------------------------ lectura de códigos */
+/* Lo que trae un QR puede ser la dirección completa o solo el código. */
+function leerCodigo(texto) {
+  const t = String(texto || '').trim();
+  const rep = t.match(/\/repuestos\/([^/?#]+)/);
+  if (rep) return {tipo: 'repuesto', valor: decodeURIComponent(rep[1])};
+  const uni = t.match(/\/u\/([^/?#]+)/);
+  if (uni) return {tipo: 'unidad', valor: patente(decodeURIComponent(uni[1]))};
+  return {tipo: 'texto', valor: t};
+}
+
+function articulo(codigo) {
+  const c = String(codigo).trim().toUpperCase();
+  return ARTS.find(a => String(a.codigo).toUpperCase() === c)
+      || ARTS.find(a => a.interno && String(a.interno).toUpperCase() === c);
+}
+
+/* Todas las entradas de códigos terminan acá. */
+function escaneado(texto, campoId) {
+  const activo = document.activeElement;
+  const id = campoId
+    || (activo && activo.classList && activo.classList.contains('scan') ? activo.id : null)
+    || (document.querySelector('#g-hoja:not([hidden]) .scan') && VISTA === 'v-gomeria' ? 'g-fuego' : null)
+    || (document.querySelector('.vista.on .scan') || {}).id;
+  if (!id || !String(texto || '').trim()) return;
+  const leido = leerCodigo(texto);
+  if (id === 'b-scan') return bajaEscaneada(leido);
+  if (id === 's-scan') return stockEscaneado(leido);
+  if (id === 'g-scan') return gomeriaEscaneada(leido);
+  if (id === 'g-fuego') return montarEscaneada(leido);
+}
+/* La app Android llama a esto cuando el lector avisa por broadcast. */
+window.alEscanear = texto => escaneado(texto);
+
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (e.key !== 'Enter' || !t.classList || !t.classList.contains('scan')) return;
+  e.preventDefault();
+  const valor = t.value;
+  t.value = '';
+  escaneado(valor, t.id);
+});
+document.querySelectorAll('[data-teclado]').forEach(b => b.onclick = () => {
+  const campo = document.getElementById(b.dataset.teclado);
+  campo.inputMode = campo.inputMode === 'none' ? 'text' : 'none';
+  campo.blur(); setTimeout(() => campo.focus(), 50);
+});
+
+/* ------------------------------------------------------------------ cámara */
+let CAM = null;
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-camara]');
+  if (b) abrirCamara(b.dataset.camara);
+});
+async function abrirCamara(campoId) {
+  const video = $('#cam-video');
+  try {
+    const flujo = await navigator.mediaDevices.getUserMedia(
+      {video: {facingMode: 'environment', width: {ideal: 1280}}, audio: false});
+    video.srcObject = flujo;
+    await video.play();
+    $('#camara').hidden = false;
+    let detector = null;
+    if ('BarcodeDetector' in window) {
+      try { detector = new BarcodeDetector(); } catch {}
+    }
+    const lienzo = document.createElement('canvas');
+    const ctx = lienzo.getContext('2d', {willReadFrequently: true});
+    CAM = {flujo, activo: true};
+    const vuelta = async () => {
+      if (!CAM || !CAM.activo) return;
+      let texto = null;
+      try {
+        if (detector) {
+          const r = await detector.detect(video);
+          if (r.length) texto = r[0].rawValue;
+        } else if (window.jsQR && video.videoWidth) {
+          const ancho = Math.min(800, video.videoWidth);
+          const alto = Math.round(video.videoHeight * ancho / video.videoWidth);
+          lienzo.width = ancho; lienzo.height = alto;
+          ctx.drawImage(video, 0, 0, ancho, alto);
+          const img = ctx.getImageData(0, 0, ancho, alto);
+          const r = jsQR(img.data, ancho, alto, {inversionAttempts: 'dontInvert'});
+          if (r) texto = r.data;
+        }
+      } catch {}
+      if (texto) { cerrarCamara(); escaneado(texto, campoId); return; }
+      setTimeout(vuelta, 120);
+    };
+    vuelta();
+  } catch (e) {
+    pitido(false);
+    alert('No se pudo abrir la cámara: ' + (e.message || e));
+  }
+}
+function cerrarCamara() {
+  if (CAM) { CAM.activo = false; CAM.flujo.getTracks().forEach(t => t.stop()); }
+  CAM = null;
+  $('#camara').hidden = true;
+  enfocar();
+}
+$('#cam-cerrar').onclick = cerrarCamara;
+
+/* --------------------------------------------------------------- repuestos */
+let CARGADO = 0;
+async function cargarRepuestos(forzar = false) {
+  if (!forzar && Date.now() - CARGADO < 60000) return;
+  try {
+    const d = await api('/api/repuestos');
+    ARTS = (d.arts || []).filter(a => a.activo !== false);
+    PUEDE_GESTIONAR = !!d.puede_gestionar;
+    STOCK = {};
+    (d.movs || []).forEach(m => {
+      const c = Number(m.cantidad) || 0;
+      STOCK[m.codigo] = (STOCK[m.codigo] || 0) + (m.tipo === 'Salida' ? -c : c);
+    });
+    CARGADO = Date.now();
+  } catch (e) {
+    estado(VISTA === 'v-stock' ? '#s-estado' : '#b-estado', 'mal', 'No se pudo leer el stock', ': ' + e.message);
+  }
+}
+async function registrar(mov) {
+  const d = await api('/api/repuestos', {op: 'movimiento_crear', movimiento: mov});
+  const c = Number(mov.cantidad);
+  STOCK[mov.codigo] = (STOCK[mov.codigo] || 0) + (mov.tipo === 'Salida' ? -c : c);
+  return d.id;
+}
+
+/* ---- baja directa */
+const BAJAS = [];
+try { $('#b-patente').value = localStorage.getItem('hh-patente') || ''; } catch {}
+$('#b-patente').addEventListener('change', e => {
+  e.target.value = patente(e.target.value);
+  try { localStorage.setItem('hh-patente', e.target.value); } catch {}
+});
+$('#b-patente').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); e.target.dispatchEvent(new Event('change')); $('#b-scan').focus(); }
+});
+
+async function bajaEscaneada(leido) {
+  if (leido.tipo === 'unidad') {
+    $('#b-patente').value = leido.valor;
+    $('#b-patente').dispatchEvent(new Event('change'));
+    pitido(true);
+    return estado('#b-estado', 'bien', 'Patente de destino: ' + leido.valor);
+  }
+  const pat = patente($('#b-patente').value);
+  if (!pat) {
+    pitido(false);
+    estado('#b-estado', 'mal', 'Falta la patente de destino', '. Cargarla o escanear el QR de la unidad.');
+    return $('#b-patente').focus();
+  }
+  await cargarRepuestos();
+  const art = articulo(leido.valor);
+  if (!art) {
+    pitido(false);
+    return estado('#b-estado', 'mal', 'Código no encontrado', ': ' + leido.valor);
+  }
+  const saldo = STOCK[art.codigo] || 0;
+  if ($('#b-confirmar').checked || saldo <= 0) return pedirConfirmacion(art, pat, saldo);
+  darDeBaja(art, pat);
+}
+
+function pedirConfirmacion(art, pat, saldo) {
+  const caja = $('#b-confirma');
+  caja.hidden = false;
+  caja.innerHTML = `<div class="ficha">
+      <div class="cod">${esc(art.codigo)}</div>
+      <div class="desc">${esc(art.descripcion)}</div>
+      <div class="stock">Stock: ${saldo} · Destino: ${esc(pat)}</div>
+      ${saldo <= 0 ? '<div class="estado aviso" style="margin-top:8px"><b>Sin stock registrado</b></div>' : ''}
+      <button class="btn" id="b-si">Dar de baja 1</button>
+      <button class="btn alt" id="b-no">Cancelar</button>
+    </div>`;
+  pitido(saldo > 0);
+  $('#b-si').onclick = () => { caja.hidden = true; darDeBaja(art, pat); };
+  $('#b-no').onclick = () => { caja.hidden = true; enfocar(); };
+}
+
+async function darDeBaja(art, pat) {
+  const fila = {art, pat, hora: hora(), id: null, estado: 'enviando'};
+  BAJAS.unshift(fila);
+  pintarBajas();
+  try {
+    fila.id = await registrar({codigo: art.codigo, tipo: 'Salida', cantidad: 1, fecha: hoy(),
+                               patente: pat, obs: 'Baja por escaneo (handheld)'});
+    fila.estado = 'ok';
+    pitido(true);
+    estado('#b-estado', 'bien', 'Baja registrada: ' + art.codigo,
+           ` · ${art.descripcion} · queda ${STOCK[art.codigo]}`);
+  } catch (e) {
+    fila.estado = 'error';
+    pitido(false);
+    estado('#b-estado', 'mal', 'No se registró ' + art.codigo, ': ' + e.message);
+  }
+  pintarBajas();
+  enfocar();
+}
+
+function pintarBajas() {
+  const ok = BAJAS.filter(b => b.estado === 'ok').length;
+  $('#b-cuenta').textContent = ok ? `(${ok})` : '';
+  $('#b-lista').innerHTML = BAJAS.map((b, i) => `
+    <li class="${b.estado === 'anulada' ? 'anulado' : ''}">
+      <div class="txt"><b>${esc(b.art.codigo)}</b>
+        <span>${esc(b.art.descripcion)} · ${esc(b.pat)} · ${b.hora}
+        ${b.estado === 'enviando' ? ' · enviando' : b.estado === 'error' ? ' · no registrada' : ''}</span></div>
+      ${b.estado === 'ok' && PUEDE_GESTIONAR ? `<button data-anular="${i}">Anular</button>` : ''}
+    </li>`).join('');
+}
+$('#b-lista').addEventListener('click', async e => {
+  const b = e.target.closest('[data-anular]');
+  if (!b) return;
+  const fila = BAJAS[+b.dataset.anular];
+  if (!confirm(`Anular la baja de ${fila.art.codigo}?`)) return;
+  try {
+    await api('/api/repuestos', {op: 'movimiento_borrar', id: fila.id});
+    fila.estado = 'anulada';
+    STOCK[fila.art.codigo] = (STOCK[fila.art.codigo] || 0) + 1;
+    estado('#b-estado', 'bien', 'Baja anulada: ' + fila.art.codigo);
+  } catch (err) {
+    estado('#b-estado', 'mal', 'No se pudo anular', ': ' + err.message);
+  }
+  pintarBajas();
+  enfocar();
+});
+
+/* ---- movimiento con cantidad */
+let TIPO = 'Entrada';
+let ART_STOCK = null;
+$('#s-tipo').addEventListener('click', e => {
+  const b = e.target.closest('[data-tipo]');
+  if (!b) return;
+  TIPO = b.dataset.tipo;
+  document.querySelectorAll('#s-tipo button').forEach(x => x.classList.toggle('on', x === b));
+  $('#s-patente-caja').hidden = TIPO !== 'Salida';
+  $('#s-costo-caja').hidden = TIPO === 'Salida';
+  enfocar();
+});
+async function stockEscaneado(leido) {
+  if (leido.tipo === 'unidad') {
+    $('#s-patente').value = leido.valor;
+    pitido(true);
+    return estado('#s-estado', 'bien', 'Patente de destino: ' + leido.valor);
+  }
+  await cargarRepuestos();
+  const art = articulo(leido.valor);
+  if (!art) {
+    ART_STOCK = null;
+    $('#s-guardar').disabled = true;
+    $('#s-ficha').innerHTML = '';
+    pitido(false);
+    return estado('#s-estado', 'mal', 'Código no encontrado', ': ' + leido.valor);
+  }
+  ART_STOCK = art;
+  pitido(true);
+  $('#s-estado').innerHTML = '';
+  $('#s-ficha').innerHTML = `<div class="ficha"><div class="cod">${esc(art.codigo)}</div>
+    <div class="desc">${esc(art.descripcion)}</div>
+    <div class="stock">Stock: ${STOCK[art.codigo] || 0} · ${esc(art.rubro || '')}</div></div>`;
+  $('#s-guardar').disabled = false;
+  $('#s-cantidad').focus();
+  $('#s-cantidad').select();
+}
+$('#s-guardar').onclick = async () => {
+  if (!ART_STOCK) return;
+  const boton = $('#s-guardar');
+  const mov = {codigo: ART_STOCK.codigo, tipo: TIPO, cantidad: parseInt($('#s-cantidad').value, 10),
+               fecha: hoy(), obs: $('#s-obs').value.trim() || 'Handheld'};
+  if (TIPO === 'Salida') mov.patente = patente($('#s-patente').value);
+  if (TIPO !== 'Salida' && $('#s-costo').value !== '') mov.costo_unitario = $('#s-costo').value;
+  boton.disabled = true;
+  try {
+    await registrar(mov);
+    pitido(true);
+    estado('#s-estado', 'bien', `${TIPO} registrada: ${ART_STOCK.codigo}`,
+           ` · ${mov.cantidad} u. · stock ${STOCK[ART_STOCK.codigo]}`);
+    ART_STOCK = null;
+    $('#s-ficha').innerHTML = '';
+    $('#s-cantidad').value = 1;
+    $('#s-costo').value = '';
+    $('#s-obs').value = '';
+  } catch (e) {
+    pitido(false);
+    estado('#s-estado', 'mal', 'No se registró', ': ' + e.message);
+    boton.disabled = false;
+  }
+  enfocar();
+};
+
+/* ----------------------------------------------------------------- gomería */
+let UNIDAD = null, MAPA = [], POS = null;
+async function gomeriaEscaneada(leido) {
+  const valor = leido.tipo === 'texto' ? patente(leido.valor) : leido.valor;
+  if (leido.tipo === 'repuesto' || !valor) {
+    pitido(false);
+    return estado('#g-estado', 'mal', 'No es una unidad', ': ' + leido.valor);
+  }
+  await cargarUnidad(valor);
+}
+async function cargarUnidad(valor) {
+  try {
+    const d = await api('/api/mapa?patente=' + encodeURIComponent(valor));
+    UNIDAD = d.unidad;
+    MAPA = d.mapa || [];
+    POS = null;
+    $('#g-estado').innerHTML = '';
+    pitido(true);
+    pintarMapa();
+  } catch (e) {
+    pitido(false);
+    estado('#g-estado', 'mal', 'Unidad no encontrada', ': ' + e.message);
+  }
+}
+function pintarMapa() {
+  $('#g-hoja').hidden = true;
+  if (!UNIDAD) return;
+  $('#g-unidad').innerHTML = `<div class="unidad">${esc(UNIDAD.patente)}
+    <span>${esc([UNIDAD.interno && 'Int. ' + UNIDAD.interno, UNIDAD.marca, UNIDAD.modelo].filter(Boolean).join(' · '))}</span></div>`;
+  $('#g-posiciones').innerHTML = MAPA.length ? MAPA.map((p, i) => `
+    <button class="pos ${p.cubierta_id ? '' : 'vacia'} ${POS === i ? 'on' : ''}" data-pos="${i}">
+      <small>${esc(p.posicion)}${p.es_auxilio ? ' · AUXILIO' : ''}</small>
+      <b>${p.cubierta_id ? esc(p.cubierta) : 'Vacía'}</b>
+      <span>${p.cubierta_id ? esc([p.medida, p.remanente_mm != null ? p.remanente_mm + ' mm' : ''].filter(Boolean).join(' · ')) : 'Montar'}</span>
+    </button>`).join('') : '<div class="estado aviso"><b>La unidad no tiene mapa de cubiertas</b></div>';
+}
+$('#g-posiciones').addEventListener('click', e => {
+  const b = e.target.closest('[data-pos]');
+  if (!b) return;
+  POS = +b.dataset.pos;
+  pintarMapa();
+  const p = MAPA[POS];
+  const hoja = $('#g-hoja');
+  hoja.hidden = false;
+  if (p.cubierta_id) {
+    hoja.innerHTML = `<b>Retirar ${esc(p.cubierta)} de ${esc(p.posicion)}</b>
+      <label for="g-destino">Destino</label>
+      <select id="g-destino">
+        <option value="stock">Stock</option><option value="recapado">Recapado</option>
+        <option value="reparacion">Reparación</option><option value="baja">Baja</option>
+      </select>
+      <label for="g-motivo">Motivo</label>
+      <input id="g-motivo" autocomplete="off" placeholder="Obligatorio">
+      <button class="btn peligro" id="g-retirar">Retirar</button>
+      <button class="btn alt" id="g-cancelar">Cancelar</button>`;
+    $('#g-retirar').onclick = retirar;
+  } else {
+    hoja.innerHTML = `<b>Montar en ${esc(p.posicion)}</b>
+      <label for="g-fuego">Número de fuego de la cubierta</label>
+      <div class="escaner">
+        <input id="g-fuego" class="scan" autocomplete="off" autocapitalize="characters" inputmode="none" placeholder="Escanear">
+        <button class="btn chico alt" data-camara="g-fuego">Cámara</button>
+        <button class="btn chico alt" data-teclado="g-fuego">⌨</button>
+      </div>
+      <div id="g-candidatas"></div>
+      <button class="btn alt" id="g-cancelar">Cancelar</button>`;
+    hoja.querySelector('[data-teclado]').onclick = () => {
+      const c = $('#g-fuego'); c.inputMode = c.inputMode === 'none' ? 'text' : 'none'; c.blur(); setTimeout(() => c.focus(), 50);
+    };
+    setTimeout(() => $('#g-fuego').focus(), 0);
+  }
+  $('#g-cancelar').onclick = () => { POS = null; pintarMapa(); enfocar(); };
+  hoja.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+});
+
+async function retirar() {
+  const p = MAPA[POS];
+  const motivo = $('#g-motivo').value.trim();
+  if (!motivo) { pitido(false); return $('#g-motivo').focus(); }
+  const boton = $('#g-retirar');
+  boton.disabled = true;
+  try {
+    await api('/api/gomeria/posicion', {unidad_id: UNIDAD.id, posicion_id: p.posicion_id,
+      accion: 'desmontar', destino: $('#g-destino').value, nota: motivo,
+      cubierta_esperada: p.cubierta_id});
+    await cargarUnidad(UNIDAD.patente);
+    estado('#g-estado', 'bien', `${p.cubierta} retirada de ${p.posicion}`);
+  } catch (e) {
+    pitido(false);
+    estado('#g-estado', 'mal', 'No se retiró', ': ' + e.message);
+    boton.disabled = false;
+  }
+}
+
+async function montarEscaneada(leido) {
+  const codigo = String(leido.valor).trim().toUpperCase();
+  try {
+    const lista = await api('/api/gomeria/stock?buscar=' + encodeURIComponent(codigo));
+    const exacta = lista.find(c => String(c.codigo).toUpperCase() === codigo);
+    if (exacta) return montar(exacta);
+    if (!lista.length) { pitido(false); return estado('#g-estado', 'mal', 'Sin cubiertas disponibles con ese código', ': ' + codigo); }
+    pitido(true);
+    $('#g-candidatas').innerHTML = '<ul class="lista">' + lista.slice(0, 20).map((c, i) => `
+      <li><div class="txt"><b>${esc(c.codigo)}</b><span>${esc([c.marca, c.medida, c.estado].filter(Boolean).join(' · '))}</span></div>
+      <button data-cand="${i}">Montar</button></li>`).join('') + '</ul>';
+    $('#g-candidatas').onclick = e => {
+      const b = e.target.closest('[data-cand]');
+      if (b) montar(lista[+b.dataset.cand]);
+    };
+  } catch (e) {
+    pitido(false);
+    estado('#g-estado', 'mal', 'No se pudo buscar la cubierta', ': ' + e.message);
+  }
+}
+async function montar(cub) {
+  const p = MAPA[POS];
+  try {
+    await api('/api/gomeria/posicion', {unidad_id: UNIDAD.id, posicion_id: p.posicion_id,
+      accion: 'montar', cubierta_id: cub.id, cubierta_esperada: null, solo_vacia: true});
+    await cargarUnidad(UNIDAD.patente);
+    estado('#g-estado', 'bien', `${cub.codigo} montada en ${p.posicion}`);
+  } catch (e) {
+    pitido(false);
+    estado('#g-estado', 'mal', 'No se montó', ': ' + e.message);
+  }
+}
+
+/* ------------------------------------------------------------------ inicio */
+/* Dentro de la APK, la dirección del servidor se cambia desde acá. */
+if (window.TitanApp) {
+  $('#servidor').hidden = false;
+  $('#servidor').onclick = () => TitanApp.cambiarServidor();
+}
+fetch('/api/yo').then(r => r.ok ? r.json() : null).then(d => {
+  if (!d) return;
+  YO = d;
+  $('#quien').textContent = d.nombre || d.usuario || '';
+}).catch(() => {});
+ir(location.hash.slice(1) && document.getElementById(location.hash.slice(1)) ? location.hash.slice(1) : 'v-inicio', false);
+</script>
+</body>
+</html>

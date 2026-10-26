@@ -1,0 +1,63 @@
+name: APK de la handheld
+# Compila la app Android de android/ y la deja para bajar en la release
+# «handheld-apk». Corre sola cuando cambia android/ y a mano desde Actions.
+on:
+  push:
+    branches: [DEMO-Y-PRUEBAS, main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      # La firma: el secreto HANDHELD_KEYSTORE (keystore en base64, alias
+      # «handheld») y HANDHELD_CLAVE. Sin secretos se genera una firma
+      # nueva en cada corrida: la APK se instala, pero para actualizarla
+      # hay que desinstalar la anterior.
+      - name: Firma
+        env:
+          KEYSTORE: ${{ secrets.HANDHELD_KEYSTORE }}
+          CLAVE: ${{ secrets.HANDHELD_CLAVE }}
+        run: |
+          if [ -n "$KEYSTORE" ] && [ -n "$CLAVE" ]; then
+            echo "$KEYSTORE" | base64 -d > android/firma.keystore
+            echo "FIRMA_CLAVE=$CLAVE" >> "$GITHUB_ENV"
+          else
+            CLAVE=$(openssl rand -hex 16)
+            echo "::add-mask::$CLAVE"
+            keytool -genkeypair -keystore android/firma.keystore -storepass "$CLAVE" \
+              -keypass "$CLAVE" -alias handheld -keyalg RSA -keysize 2048 -validity 20000 \
+              -dname "CN=Titan Flota Handheld, O=Titan Flota, C=AR"
+            echo "FIRMA_CLAVE=$CLAVE" >> "$GITHUB_ENV"
+          fi
+      - name: Compilar
+        run: gradle -p android assembleRelease --no-daemon
+      - name: Renombrar
+        run: cp android/app/build/outputs/apk/release/app-release.apk titan-handheld.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: titan-handheld
+          path: titan-handheld.apk
+      - name: Publicar en la release handheld-apk
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: handheld-apk
+          name: Titán Handheld (APK)
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          body: |
+            APK de la terminal con lector. Compilada desde ${{ github.ref_name }} (${{ github.sha }}).
+            Instalar titan-handheld.apk en la terminal.
+          files: titan-handheld.apk

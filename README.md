@@ -311,6 +311,15 @@ No aplicar su migración hasta resolver la unificación: sus tablas (`mt_*`)
 son otra versión de lo que ya hace `/solicitudes`, y tener las dos andando
 sería tener dos verdades del mismo gasto. Hay que elegir una y sacar la otra.
 
+## Handheld: terminal con lector
+
+`/handheld` es la pantalla de la terminal del depósito y la gomería, y
+`android/` la APK que la abre. Escanear el QR de un repuesto lo da de baja
+(salida de 1 unidad a la patente fijada); también hay movimientos de stock
+con cantidad y montaje y retiro de cubiertas. La APK la compila GitHub
+Actions y queda en la release `handheld-apk`. Ver
+[la guía de la handheld](docs/HANDHELD.md).
+
 ## Reportes de choferes y configuración de vencimientos
 
 La primera versión para teléfonos está en `/choferes/`; el taller recibe las fallas en

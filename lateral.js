@@ -21,7 +21,7 @@
      parado al lado de la unidad y ahí el ancho es todo. La portada tiene
      la suya adentro de su grilla y se encoge sola. La misma lista vive en
      gomeria/lateral.py, que decide a qué pantalla le pone el marcado. */
-  var SIN_BARRA = ['/movil', '/u/'];
+  var SIN_BARRA = ['/movil', '/handheld', '/u/'];
 
   function donde() { return location.pathname.replace(/\/+$/, '') || '/'; }
 

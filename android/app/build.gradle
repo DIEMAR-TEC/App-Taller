@@ -1,0 +1,40 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "com.titanflota.handheld"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.titanflota.handheld"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    // La firma sale de variables de entorno que pone el workflow (desde
+    // los secretos del repositorio). La clave no va en el repositorio.
+    // Con la misma firma, la APK nueva se instala encima de la anterior.
+    signingConfigs {
+        interna {
+            storeFile rootProject.file("firma.keystore")
+            storePassword System.getenv("FIRMA_CLAVE")
+            keyAlias "handheld"
+            keyPassword System.getenv("FIRMA_CLAVE")
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.interna
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
