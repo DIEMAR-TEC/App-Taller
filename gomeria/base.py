@@ -646,6 +646,10 @@ def crear_unidad(cx, patente, configuracion_id, **datos):
 
 
 def alta_cubierta(cx, codigo, **datos):
+    # Un campo numérico vacío del formulario llega como "": a la base va
+    # como sin dato, no como texto.
+    for campo in ("costo_compra", "remanente_mm"):
+        datos[campo] = _numero_o_none(datos.get(campo))
     # El código provisorio es el de la goma que entró sin número de fuego:
     # el gomero lo graba cuando la recibe. Ver 41_codigo_de_fuego.sql.
     fila = cx.execute("""
