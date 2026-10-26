@@ -5,52 +5,45 @@ depósito y la gomería.
 
 ## Qué hace
 
-- **Baja de repuestos.** Se fija la patente de destino (a mano o
-  escaneando el QR de la unidad) y cada QR de repuesto escaneado registra
-  una **salida de 1 unidad** para esa patente, al instante. Si el repuesto
-  no tiene stock registrado, o si está marcado *Confirmar cada baja*, pide
-  confirmación. Quien tiene el permiso «gestiona» puede anular una baja de
-  la lista. Las salidas pasan al gasto de la unidad igual que las cargadas
-  en `/repuestos`.
-- **Movimiento de stock.** Entrada (con costo opcional), salida o ajuste,
-  con cantidad.
-- **Gomería.** Se escanea la unidad (patente, interno o el QR
-  `/gomeria/u/PATENTE`), se toca una posición y se **retira** (destino y
-  motivo) o se **monta** (escaneando o tipeando el número de fuego).
+El inicio tiene tres cosas: el campo para escanear el QR de la unidad,
+**Movimiento de gomería** y **Movimiento de stock**.
 
-- **Registrar trabajo de gomería.** El parte escrito o dictado, como en
-  `/movil`: lo interpreta la API de Claude (`/api/interpretar`), se muestra
-  la propuesta y se guarda solo al confirmar. Al terminar de dictar se
-  interpreta solo. El dictado usa el reconocedor de voz de Android (en la
-  APK) o el de Chrome (en el navegador); si el equipo no tiene ninguno, el
-  botón no aparece o avisa.
-- **Ficha de la unidad** (`/handheld/u/PATENTE`, la historia clínica):
-  datos de la unidad, km actual y de los últimos 30 días, litros y L/100 km
-  de los últimos seis meses, documentos vencidos o por vencer, órdenes de
-  trabajo con su costo, cubiertas puestas y últimos movimientos de gomería.
-  Desde ahí: **Cubiertas** (retirar y montar), **Registrar trabajo**,
-  **Orden interna** y **Servicio externo** (abren `/movil` con la unidad
-  elegida). Los datos salen de `/api/handheld/unidad`, que arma la misma
-  ficha de Flota más el combustible.
-- **QR para imprimir** (`/handheld/qr`, solo con el permiso «gestiona»,
-  desde la computadora; no tiene acceso desde la handheld): uno grande de «Registrar trabajo»
-  y uno por unidad que abre su ficha. Sirven con la handheld y con la
-  cámara de cualquier celular. Los QR viejos de gomería (`/gomeria/u/…`)
-  escaneados con la handheld también abren la ficha.
+- **Registro de la unidad** (`/handheld/u/PATENTE`, lo que abre el QR
+  pegado en el camión): datos, km actual y de los últimos 30 días, litros
+  y L/100 km de los últimos seis meses, documentos vencidos o por vencer,
+  órdenes con su costo, cubiertas puestas y últimos movimientos de
+  gomería. Desde ahí: **Movimiento de gomería** y **Movimiento de stock**
+  para esa unidad, y **Orden interna** / **Servicio externo** (abren
+  `/movil` con la unidad elegida). Los datos salen de
+  `/api/handheld/unidad`: la ficha de Flota más el combustible.
+- **Movimiento de gomería**: el parte escrito o dictado, como en `/movil`.
+  Lo interpreta la API de Claude (`/api/interpretar`), se muestra la
+  propuesta y se guarda solo al confirmar. El dictado se suma al texto y
+  no se manda solo: el reconocedor corta en cada pausa y se puede seguir
+  dictando. Lo escrito queda guardado en el equipo hasta confirmar, así una
+  recarga no lo borra. Abajo, **Retirar o montar por posición**.
+- **Movimiento de stock**: en **Salida** (la opción de entrada) se fija
+  la unidad que recibe y cada QR de repuesto escaneado sale de a uno para
+  esa unidad, al instante; si no hay stock registrado pide confirmar.
+  **Entrada** y **Ajuste**: se escanea, se pone la cantidad y se registra.
+  Quien tiene «gestiona» puede anular desde la lista.
+- **QR para imprimir** (`/handheld/qr`, solo con «gestiona», desde la
+  computadora): uno grande de «Movimiento de gomería» y uno por unidad de
+  95 × 68 mm (8 por A4) con el logo arriba y en el centro del QR (corrección
+  de errores H). Sirven con la handheld y con la cámara de un celular.
 
-Desde el inicio, cualquier código escaneado va a donde corresponde: el QR
-de un repuesto a la baja, el de una unidad a su ficha y el de registrar
-trabajo al parte.
-
-Usa las mismas API y permisos que Repuestos y Gomería. Abre con el módulo
-Repuestos o Gomería; montar y retirar cubiertas pide «gestiona».
+Usa las mismas API y permisos que Repuestos y Gomería; la pantalla abre
+con el módulo Repuestos o Gomería. Retirar y montar por posición pide
+«gestiona».
 
 ## Cómo entra el código
 
 1. **Lector en modo teclado** (lo normal en Zebra, Honeywell, Urovo,
    Chainway, Sunmi): escribe el código en el campo y manda Enter. No hay
    que configurar nada, salvo que el lector agregue el Enter al final.
-   Si el lector no manda Enter, una pausa de 300 ms cierra la lectura.
+   Si el lector no manda Enter, una pausa de 300 ms cierra la lectura,
+   solo si los caracteres llegaron a ritmo de lector (menos de 40 ms cada
+   uno): lo tipeado a mano espera el Enter.
 2. **Zebra**: al abrir, la APK crea en DataWedge el perfil
    `TitanHandheld` asociado a la app, con salida por broadcast
    (`com.titanflota.handheld.SCAN`) y sin teclado. No hace falta tocar
@@ -62,6 +55,10 @@ Repuestos o Gomería; montar y retirar cubiertas pide «gestiona».
 
 El QR de las etiquetas trae la dirección `/repuestos/CÓDIGO`; también se
 acepta el código pelado o el código interno.
+
+Todas las consultas van con `credentials: 'same-origin'`: los WebView
+anteriores a Chrome 72 no mandan la cookie de sesión en un `fetch` si no
+se les pide, y el servidor contestaba «sesión cerrada».
 
 Si el navegador del sistema (Android System WebView) es demasiado viejo
 para la pantalla, se muestra un aviso con su versión.

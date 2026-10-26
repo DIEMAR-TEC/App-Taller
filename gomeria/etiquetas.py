@@ -33,6 +33,9 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 # El logo de Titán Flota en una versión liviana para imprimir: va
 # incrustado en la hoja de etiquetas.
 LOGO = os.path.join(AQUI, os.pardir, "titan-flota-impresion.png")
+# La «T» del sistema, la misma del ícono de la app: va en el centro de los
+# QR que se pegan en los camiones.
+ICONO = os.path.join(AQUI, os.pardir, "titan-flota-icono.png")
 
 ANCHO_MM = 70
 ALTO_MM = 37
@@ -54,14 +57,14 @@ ROLLOS = [
 ]
 
 
-def _formato():
+def _formato(a4=f"Hoja A4 · {ANCHO_MM} × {ALTO_MM} mm"):
     """El selector de formato de la barra y el código que lo aplica.
 
     En rollo, el @page pasa a medir lo que la etiqueta y cada una sale en
     su propia página: así lo espera el driver de cualquier etiquetadora.
     Las etiquetas altas (más alto que ancho) se imprimen giradas para que
     el QR y el texto entren a lo largo."""
-    opciones = f'<option value="a4">Hoja A4 · {ANCHO_MM} × {ALTO_MM} mm</option>' + "".join(
+    opciones = f'<option value="a4">{html.escape(a4)}</option>' + "".join(
         f'<option value="{v}">{html.escape(t)}</option>' for v, t in ROLLOS)
     selector = f'<select id="formato" title="Formato de impresión">{opciones}</select>'
     script = """<style id="estilo-rollo"></style>
@@ -128,9 +131,22 @@ CSS_ROLLO = """
 """
 
 
-def _qr(texto):
-    """El QR como SVG, sin cabecera XML, para incrustarlo en la página."""
-    img = qrcode.make(texto, image_factory=SvgPathImage, box_size=10, border=1)
+def _qr(texto, icono=False):
+    """El QR como SVG, sin cabecera XML, para incrustarlo en la página.
+
+    Con icono, lleva el logo del sistema en el centro. Para que se siga
+    leyendo con el centro tapado, se arma con la corrección de errores más
+    alta (H, recupera hasta el 30%) y el logo ocupa menos de un cuarto del
+    ancho.
+    """
+    if icono:
+        qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_H,
+                           box_size=10, border=1, image_factory=SvgPathImage)
+        qr.add_data(texto)
+        qr.make(fit=True)
+        img = qr.make_image()
+    else:
+        img = qrcode.make(texto, image_factory=SvgPathImage, box_size=10, border=1)
     buf = io.BytesIO()
     img.save(buf)
     svg = buf.getvalue().decode()
@@ -142,7 +158,19 @@ def _qr(texto):
             i = svg.index(atributo)
             j = svg.index('"', i + len(atributo)) + 1
             svg = svg[:i] + svg[j:]
-    return svg.replace("<svg", '<svg class="qr" preserveAspectRatio="xMidYMid meet"', 1)
+    svg = svg.replace("<svg", '<svg class="qr" preserveAspectRatio="xMidYMid meet"', 1)
+    if icono and os.path.exists(ICONO):
+        lado = float(svg.split('viewBox="0 0 ', 1)[1].split(" ", 1)[0])
+        t = round(lado * 0.24, 2)
+        x = round((lado - t) / 2, 2)
+        datos = base64.b64encode(open(ICONO, "rb").read()).decode()
+        svg = svg.replace("</svg>",
+            f'<rect x="{x - 0.6}" y="{x - 0.6}" width="{t + 1.2}" height="{t + 1.2}" rx="1" fill="#fff"/>'
+            f'<image x="{x}" y="{x}" width="{t}" height="{t}" '
+            f'href="data:image/png;base64,{datos}" xlink:href="data:image/png;base64,{datos}"/></svg>')
+        svg = svg.replace('xmlns="http://www.w3.org/2000/svg"',
+                          'xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"', 1)
+    return svg
 
 
 def _logo():
@@ -284,56 +312,76 @@ def hoja(cx, base, rubro=None, codigos=None):
 
 def cartel_handheld(cx, base):
     """El QR de «registrar trabajo», para la gomería, y uno por unidad,
-    para pegar en cada camión: abre su ficha (historia clínica) con los
-    accesos a cubiertas y órdenes. Sirven igual desde la handheld y desde
-    la cámara de un celular."""
+    para pegar en cada camión: abre su registro (datos, gomería y stock).
+    Sirven igual desde la handheld y desde la cámara de un celular.
+
+    Las de los camiones son más grandes que las de los repuestos —95 × 68
+    mm, ocho por hoja A4— y llevan el logo arriba y en el centro del QR:
+    se leen a un metro y se reconocen como del sistema.
+    """
     base = base.rstrip("/")
     unidades = cx.execute("""
         select patente, interno from unidades where activa
         order by patente""").fetchall()
+    marca = _logo()
 
-    def tarjeta(destino, titulo, sub):
+    def tarjeta(u):
+        destino = f"{base}/handheld/u/{u['patente']}"
+        interno = f"Interno {u['interno']}" if u["interno"] else ""
         return f"""    <div class="pag"><div class="et">
-      {_qr(destino)}
-      <div class="txt"><b>{html.escape(titulo)}</b><span class="desc">{html.escape(sub)}</span></div>
+      <div class="cab">{marca}<span>Registro de la unidad</span></div>
+      <div class="cuerpo">{_qr(destino, icono=True)}
+        <div class="txt"><b>{html.escape(u['patente'])}</b><span>{html.escape(interno)}</span></div>
+      </div>
     </div></div>"""
 
-    grande = f"""<div class="pag"><div class="grande">{_qr(base + "/handheld#v-trabajo")}
-      <h1>Registrar trabajo de gomería</h1>
-      <p>Escanear para cargar el parte escrito o dictado.</p></div></div>"""
-    selector, script = _formato()
-    chicas = "\n".join(tarjeta(f"{base}/handheld/u/{u['patente']}", u["patente"],
-                               f"Int. {u['interno']}" if u["interno"] else "Ficha de la unidad")
-                       for u in unidades)
+    grande = f"""<div class="pag"><div class="grande">{marca}
+      {_qr(base + "/handheld#v-trabajo", icono=True)}
+      <h1>Movimiento de gomería</h1>
+      <p>Escanear para cargar el trabajo escrito o dictado.</p></div></div>"""
+    selector, script = _formato("Hoja A4 · 95 × 68 mm")
+    chicas = "\n".join(tarjeta(u) for u in unidades)
     return f"""<!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"><title>QR de gomería | Titán Flota</title>
+<html lang="es"><head><meta charset="UTF-8"><title>QR de unidades | Titán Flota</title>
 <style>
   @page {{ size: A4; margin: 8mm; }}
   * {{ box-sizing: border-box; }}
   body {{ margin: 0; background: #6b7280; color: #111; font: 13px Inter, system-ui, sans-serif; }}
-  .barra {{ position: sticky; top: 0; display: flex; gap: 14px; align-items: center;
+  .barra {{ position: sticky; top: 0; z-index: 5; display: flex; gap: 14px; align-items: center;
     padding: 12px 20px; background: #12161a; color: #edf0f2; }}
   .barra a, .barra button {{ color: #fff; background: #2563eb; border: 0; border-radius: 9px;
     padding: 9px 15px; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }}
   .hoja {{ width: 210mm; margin: 14px auto; padding: 8mm; background: #fff; }}
-  .grande {{ text-align: center; padding: 10mm 0; break-after: page; }}
-  .grande .qr {{ width: 120mm; height: 120mm; }}
+  .grande {{ text-align: center; padding: 8mm 0; break-after: page; }}
+  .grande .dm {{ height: 16mm; }}
+  .grande .qr {{ display: block; margin: 8mm auto 0; width: 120mm; height: 120mm; }}
   .grande h1 {{ font-size: 26pt; margin: 6mm 0 2mm; }}
-  .grilla {{ display: grid; grid-template-columns: repeat({COLUMNAS}, {ANCHO_MM}mm);
-    grid-auto-rows: {ALTO_MM}mm; justify-content: center; }}
+  .grilla {{ display: grid; grid-template-columns: repeat(2, 95mm); grid-auto-rows: 68mm;
+    gap: 0; justify-content: center; }}
   .pag {{ display: contents; }}
-  .et {{ display: flex; align-items: center; gap: 3mm; padding: 2.5mm; border: 1px dashed #d4d4d8; }}
-  .et .qr {{ height: {ALTO_MM - 7}mm; width: {ALTO_MM - 7}mm; flex: none; }}
-  .et b {{ display: block; font-size: 13pt; }}
-  .et .desc {{ font-size: 8pt; color: #52525b; }}
+  .et {{ display: flex; flex-direction: column; padding: 4mm; border: 1px dashed #d4d4d8; }}
+  .et .cab {{ display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1.2mm solid #14243a; padding-bottom: 1.5mm; }}
+  .et .cab .dm {{ height: 8mm; }}
+  .et .cab span {{ font-size: 8pt; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #14243a; }}
+  .et .cuerpo {{ flex: 1; display: flex; align-items: center; gap: 4mm; padding-top: 2mm; }}
+  .et .qr {{ width: 46mm; height: 46mm; flex: none; }}
+  .et .txt {{ min-width: 0; }}
+  .et .txt b {{ display: block; font-size: 18pt; letter-spacing: .5px; color: #14243a; line-height: 1.05; }}
+  .et .txt span {{ font-size: 10pt; color: #52525b; }}
   @media print {{ body {{ background: #fff; }} .barra {{ display: none; }}
     .hoja {{ width: auto; margin: 0; padding: 0; }} .et {{ break-inside: avoid; }} }}
 {CSS_ROLLO}
+  body.rollo .et .cab {{ display: none; }}
+  body.rollo .et .cuerpo {{ padding: 0; gap: 2mm; height: 100%; }}
+  body.rollo .et .qr {{ width: calc(var(--eh) - 3mm); height: calc(var(--eh) - 3mm); }}
+  body.rollo .et .txt b {{ font-size: 14pt; }}
 </style></head>
 <body>
-<div class="barra"><a href="/handheld">‹ Volver</a><b>QR de gomería</b>
+<div class="barra"><b>QR de unidades</b>
   {selector}
-  <button onclick="print()">Imprimir</button></div>
+  <button onclick="print()">Imprimir</button>
+  <span class="nota" id="nota-formato" style="margin-left:auto;color:#8d959e;font-size:12px">95 × 68 mm · 8 por hoja A4</span></div>
 <div class="hoja">
 {grande}
 <div class="grilla">

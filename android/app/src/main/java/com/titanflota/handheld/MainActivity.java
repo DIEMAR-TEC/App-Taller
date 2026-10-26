@@ -241,6 +241,11 @@ public class MainActivity extends Activity {
         pedido.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         pedido.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-AR");
         pedido.putExtra(RecognizerIntent.EXTRA_PROMPT, "Trabajo realizado");
+        // Que no corte en la primera pausa: el gomero piensa entre una
+        // cubierta y la otra.
+        pedido.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 4000);
+        pedido.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 4000);
+        pedido.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 10000);
 
         if (SpeechRecognizer.isRecognitionAvailable(this)) {
             if (reconocedor == null) reconocedor = SpeechRecognizer.createSpeechRecognizer(this);
@@ -301,7 +306,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String version() {
-            return "1.2";
+            return "1.3";
         }
     }
 
