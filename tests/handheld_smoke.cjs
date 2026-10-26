@@ -51,6 +51,16 @@ const ARTS = [
           return route.fulfill({status: 404, json: {error: 'No se encontró la unidad.'}});
         return route.fulfill({json: {unidad: {id: 7, patente: 'AD247MQ', marca: 'Scania'}, mapa}});
       }
+      if (p === '/api/interpretar') {
+        const d = req.postDataJSON();
+        posts.push({op: 'interpretar', ...d});
+        return route.fulfill({json: {parte_id: 55, unidad: {patente: 'AD247MQ'},
+          propuesta: {resumen: 'Cambio en 3 eje', acciones: [{tipo: 'montar', posicion: '3I', cubierta: '079'}]}}});
+      }
+      if (p === '/api/confirmar') {
+        posts.push({op: 'confirmar', ...req.postDataJSON()});
+        return route.fulfill({json: {hecho: ['079 montada en 3I']}});
+      }
       if (p === '/api/gomeria/stock')
         return route.fulfill({json: [{id: 900, codigo: 'F200', medida: '295/80R22.5', estado: 'stock'}]});
       if (p === '/api/gomeria/posicion') {
@@ -64,6 +74,7 @@ const ARTS = [
     });
 
     await page.goto('http://hh.test/handheld');
+    assert.ok(await page.evaluate(() => window.__hhListo), 'el código de la página corrió');
     await page.click('[data-ir="v-baja"]');
 
     // Sin patente, el escaneo no da de baja.
@@ -139,6 +150,36 @@ const ARTS = [
     await page.evaluate(() => window.alEscanear('f200'));
     await page.waitForFunction(() => /montada/.test(document.querySelector('#g-estado').textContent));
     assert.deepStrictEqual([posts.at(-1).accion, posts.at(-1).cubierta_id, posts.at(-1).posicion_id], ['montar', 900, 12]);
+
+    // Registrar trabajo: el QR de la unidad desde el inicio abre el parte.
+    await page.click('#volver');
+    await page.evaluate(() => window.alEscanear('https://app.test/gomeria/u/AD247MQ'));
+    await page.waitForSelector('#v-trabajo.on');
+    await page.fill('#t-texto', '3 eje izquierdo entra Michelin 079');
+    await page.click('#t-interpretar');
+    await page.waitForSelector('#t-confirmar');
+    assert.deepStrictEqual([posts.at(-1).op, posts.at(-1).patente], ['interpretar', 'AD247MQ']);
+    await page.click('#t-confirmar');
+    await page.waitForFunction(() => /guardado/.test(document.querySelector('#t-salida').textContent));
+    assert.deepStrictEqual([posts.at(-1).op, posts.at(-1).parte_id], ['confirmar', 55]);
+
+    // El dictado que devuelve la APK se interpreta solo.
+    await page.evaluate(() => window.alDictar('sale la 380 para recapar'));
+    await page.waitForSelector('#t-confirmar');
+    assert.strictEqual(posts.at(-1).texto, 'sale la 380 para recapar');
+
+    // El QR de «registrar trabajo» desde el inicio.
+    await page.click('#volver');
+    await page.evaluate(() => window.alEscanear('https://app.test/handheld#v-trabajo'));
+    await page.waitForSelector('#v-trabajo.on');
+
+    // Un lector sin Enter: el código escrito de golpe se toma igual.
+    await page.click('#volver');
+    const antes = posts.length;
+    await page.focus('#i-scan');
+    await page.keyboard.insertText('https://app.test/repuestos/FIL-001');
+    await page.waitForFunction(n => document.querySelector('#v-baja.on') && document.querySelectorAll('#b-lista li').length > 3, antes);
+    assert.strictEqual(posts.at(-1).movimiento.codigo, 'FIL-001');
 
     assert.deepStrictEqual(errores, []);
     console.log('handheld_smoke: ok');

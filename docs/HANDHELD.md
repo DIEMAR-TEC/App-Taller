@@ -18,6 +18,20 @@ depósito y la gomería.
   `/gomeria/u/PATENTE`), se toca una posición y se **retira** (destino y
   motivo) o se **monta** (escaneando o tipeando el número de fuego).
 
+- **Registrar trabajo de gomería.** El parte escrito o dictado, como en
+  `/movil`: lo interpreta la API de Claude (`/api/interpretar`), se muestra
+  la propuesta y se guarda solo al confirmar. Al terminar de dictar se
+  interpreta solo. El dictado usa el reconocedor de voz de Android (en la
+  APK) o el de Chrome (en el navegador); si el equipo no tiene ninguno, el
+  botón no aparece o avisa.
+- **QR para imprimir** (`/handheld/qr`): uno grande de «Registrar trabajo»
+  y uno por unidad. Escaneados desde el inicio de la handheld abren el
+  parte (con la unidad ya elegida si es el QR de una unidad).
+
+Desde el inicio, cualquier código escaneado va a donde corresponde: el QR
+de un repuesto a la baja, el de una unidad o el de registrar trabajo al
+parte.
+
 Usa las mismas API y permisos que Repuestos y Gomería. Abre con el módulo
 Repuestos o Gomería; montar y retirar cubiertas pide «gestiona».
 
@@ -26,13 +40,21 @@ Repuestos o Gomería; montar y retirar cubiertas pide «gestiona».
 1. **Lector en modo teclado** (lo normal en Zebra, Honeywell, Urovo,
    Chainway, Sunmi): escribe el código en el campo y manda Enter. No hay
    que configurar nada, salvo que el lector agregue el Enter al final.
-2. **Lector por broadcast**: la app escucha las acciones más comunes
+   Si el lector no manda Enter, una pausa de 300 ms cierra la lectura.
+2. **Zebra**: al abrir, la APK crea en DataWedge el perfil
+   `TitanHandheld` asociado a la app, con salida por broadcast
+   (`com.titanflota.handheld.SCAN`) y sin teclado. No hace falta tocar
+   DataWedge.
+3. **Lector por broadcast** de otras marcas: la app escucha las acciones más comunes
    (lista en `MainActivity.ACCIONES`). En Zebra DataWedge se puede usar la
    acción `com.titanflota.handheld.SCAN` con entrega por *Broadcast intent*.
-3. **Cámara**: botón *Cámara*, lee QR con el detector del sistema o jsQR.
+4. **Cámara**: botón *Cámara*, lee QR con el detector del sistema o jsQR.
 
 El QR de las etiquetas trae la dirección `/repuestos/CÓDIGO`; también se
 acepta el código pelado o el código interno.
+
+Si el navegador del sistema (Android System WebView) es demasiado viejo
+para la pantalla, se muestra un aviso con su versión.
 
 ## La APK
 

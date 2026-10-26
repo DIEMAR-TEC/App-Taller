@@ -89,6 +89,7 @@ RUTAS = {
     # La pantalla de la handheld: repuestos y gomería. Cada API que llama
     # revisa además su propio módulo.
     "/handheld": ("repuestos", "gomeria"),
+    "/handheld/qr": "gomeria",
     "/api/estanterias": "repuestos",
     "/ordenes": "ordenes", "/api/ordenes": "ordenes", "/api/factura": "ordenes",
     "/solicitudes": "solicitudes", "/api/solicitudes": "solicitudes",
