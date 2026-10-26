@@ -66,12 +66,22 @@ jobs:
       - name: Limpiar chromedriver del PATH
         run: sudo rm -f "$(command -v chromedriver)" || true
 
-      # SECRETOS lleva todos los secrets del repo: cada cuenta de
-      # cuentas.json nombra los suyos, así que sumar una empresa no obliga
-      # a tocar este archivo.
+      # Cada cuenta de gomeria/satelitales/cuentas.json nombra los secrets
+      # que usa y acá van uno por uno. Antes iban todos juntos con
+      # toJSON(secrets), que ahorraba tocar este archivo al sumar una
+      # empresa. GitHub lee ese volcado como una fuga de secretos: marcó el
+      # workflow como posiblemente malicioso y desde el 24/10/2026 las
+      # corridas quedaron esperando aprobación, sin leer un solo odómetro.
+      #
+      # Sumar una empresa ahora pide dos líneas acá. tests/test_satelitales.py
+      # compara las dos listas y se cae si falta alguna, así no se descubre
+      # un día a las cinco de la mañana.
       - name: Leer los satelitales y guardar en Supabase
         env:
-          SECRETOS: ${{ toJSON(secrets) }}
+          HAWK_API_USER: ${{ secrets.HAWK_API_USER }}
+          HAWK_API_PASS: ${{ secrets.HAWK_API_PASS }}
+          HAWK_USER: ${{ secrets.HAWK_USER }}
+          HAWK_PASS: ${{ secrets.HAWK_PASS }}
           SOLO_CUENTAS: ${{ github.event.inputs.solo_cuentas }}
           SOLO_EMPRESAS: ${{ github.event.inputs.solo_empresas }}
           PROBAR: ${{ github.event.inputs.probar }}
