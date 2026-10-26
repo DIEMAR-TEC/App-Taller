@@ -100,6 +100,9 @@ PANTALLAS = {
     "/parametros": ("parametros.html",         "text/html; charset=utf-8"),
     # El módulo liviano para el teléfono: solo gomería y órdenes.
     "/movil":      ("telefono.html",           "text/html; charset=utf-8"),
+    # La terminal con lector del depósito y la gomería: bajas de repuestos
+    # por escaneo, movimientos de stock y cubiertas. La abre la APK.
+    "/handheld":   ("handheld.html",           "text/html; charset=utf-8"),
     "/configuracion": ("configuracion.html",   "text/html; charset=utf-8"),
     # El logo con letras azul noche, para papel: la cédula y la orden
     # impresa piden este nombre desde siempre.
