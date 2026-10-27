@@ -301,7 +301,7 @@ class App(CupoPorPedido, gom.Handler):
     def _en_celular(self):
         """Si el pedido viene de un teléfono. Las tablets y la APK no: la APK
         ya abre la handheld, y en una tablet entra el sistema completo."""
-        agente = self.headers.get("User-Agent") or ""
+        agente = (getattr(self, "headers", None) or {}).get("User-Agent") or ""
         return bool(re.search(r"iPhone|iPod|Android.*Mobile|Mobile.*Android|Windows Phone", agente)) \
             and "TitanHandheld" not in agente
 
@@ -309,7 +309,7 @@ class App(CupoPorPedido, gom.Handler):
         """El acceso de vuelta a la versión handheld, flotando abajo, para quien
         eligió el sistema completo en el celular."""
         ruta = self._ruta_pedida()
-        if (not self._en_celular() or _vista(self.headers) != "completa"
+        if (not self._en_celular() or _vista(getattr(self, "headers", None) or {}) != "completa"
                 or ruta.startswith(("/handheld", "/choferes", "/login"))
                 or not permisos.puede_ver(self.usuario, ("repuestos", "gomeria"))):
             return ""
