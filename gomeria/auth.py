@@ -632,7 +632,7 @@ LOGIN = _PAGINA.replace("__TITULO__", "Ingresar").replace("__CUERPO__", """<form
   <input type="hidden" name="destino" value="__DESTINO__">
   <button type="submit">Ingresar</button>
   __ERROR__
-  <div class="pie">¿No tenés usuario o olvidaste la contraseña? Pedíselo al encargado del sistema.</div>
+  <div class="pie">Usuario nuevo o contraseña olvidada: consultar al encargado del sistema.</div>
 </form>""")
 
 
