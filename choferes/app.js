@@ -23,8 +23,12 @@ async function context(){
    status('Sin conexión verificada. Los reportes quedarán pendientes para '+account.nombre+'.');
  }
  $('#session').textContent='Cuenta: '+account.nombre;
- $('#unit').replaceChildren(new Option('Elegí una unidad',''));
+ $('#unit').replaceChildren(new Option('Seleccionar unidad',''));
  for(const u of account.unidades)$('#unit').add(new Option(u.patente+(u.interno?' · '+u.interno:''),u.id));
+ // Desde el QR de la unidad llega ?patente=: queda elegida.
+ const pedida=(new URLSearchParams(location.search).get('patente')||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+ const esa=account.unidades.find(u=>String(u.patente).toUpperCase().replace(/[^A-Z0-9]/g,'')===pedida);
+ if(esa)$('#unit').value=esa.id;
  $('#save').disabled=false;await render();
 }
 async function sync(){

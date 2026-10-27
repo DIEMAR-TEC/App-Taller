@@ -261,6 +261,28 @@ def nombre_de(modulo):
     return nombres.get(modulo, modulo)
 
 
+# Los módulos de trabajo de taller y oficina. Quien tiene alguno no es
+# solamente chofer, aunque también pueda reportar fallas.
+_DE_TALLER = ("repuestos", "gomeria", "ordenes", "solicitudes", "unidades",
+              "combustible", "usuarios", "parametros", "alertas")
+
+
+def es_chofer(usuario):
+    """Si al entrar va directo al formulario de fallas (/choferes/).
+
+    El rol chofer, o cualquier rol que reporta fallas y no tiene ningún
+    módulo de taller ni de oficina: ver vencimientos o services no lo
+    hace dejar de ser chofer.
+    """
+    usuario = usuario or {}
+    if usuario.get("administra"):
+        return False
+    if (usuario.get("rol") or "") == "chofer":
+        return True
+    tiene = usuario.get("modulos") or ()
+    return "choferes" in tiene and not any(m in tiene for m in _DE_TALLER)
+
+
 def gestiona(usuario):
     """Nivel taller: aprueba, cierra, corrige.
 
