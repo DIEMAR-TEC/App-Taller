@@ -32,9 +32,12 @@ El inicio tiene tres cosas: el campo para escanear el QR de la unidad,
   95 × 68 mm (8 por A4) con el logo arriba y en el centro del QR (corrección
   de errores H). Sirven con la handheld y con la cámara de un celular.
 
-**Choferes.** Un usuario que tiene «Reportar fallas» y no tiene Repuestos
-ni Gomería (el rol chofer) entra por la misma app y el servidor lo manda a
-`/choferes/`, el formulario de fallas con fotos y cola sin conexión. La APK
+**Choferes.** El rol chofer, o cualquier rol que tiene «Reportar fallas»
+y ningún módulo de taller ni de oficina (ver `permisos.es_chofer`: puede
+tener Vencimientos o Services), va siempre a `/choferes/`, el formulario de
+fallas con fotos y cola sin conexión: al entrar por la portada, por la app
+de la handheld o escaneando el QR de una unidad (nuevo o viejo), que deja
+esa unidad elegida (`/choferes/?patente=…`). La APK
 recuerda que terminó ahí: si arranca sin señal, abre ese formulario desde
 la copia guardada en el equipo (service worker) y los reportes se envían
 solos cuando vuelve la conexión.
