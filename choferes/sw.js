@@ -1,5 +1,5 @@
 importScripts('/choferes/cola.js');
-const CACHE='choferes-shell-v5';
+const CACHE='choferes-shell-v9';
 const FILES=['/choferes/','/choferes/app.js','/choferes/cola.js','/choferes/style.css','/choferes/manifest.webmanifest','/choferes/icon.svg','/choferes/icon.png'];
 // La versión nueva reemplaza a la anterior sin esperar a que se cierren las pestañas.
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));

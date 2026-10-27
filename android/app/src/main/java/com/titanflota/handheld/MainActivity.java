@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -306,11 +307,36 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String version() {
-            return "1.3";
+            return "1.4";
         }
     }
 
+    /*
+     * La app siempre entra por /handheld y el servidor manda a cada uno a lo
+     * suyo: al chofer, a /choferes/. Se recuerda dónde terminó para el
+     * arranque sin señal: el formulario de fallas lo guarda el service
+     * worker en el equipo, así que el chofer lo abre igual y el reporte
+     * queda en cola hasta que vuelva la conexión.
+     */
+    SharedPreferences prefs() {
+        return getSharedPreferences("titan", MODE_PRIVATE);
+    }
+
+    String inicio() {
+        return prefs().getString("inicio", PANTALLA);
+    }
+
     class Cliente extends WebViewClient {
+        @Override
+        public void onPageFinished(WebView vista, String url) {
+            Uri u = Uri.parse(url);
+            if (u.getHost() == null || !u.getHost().equals(Uri.parse(servidor()).getHost())) return;
+            String camino = u.getPath() == null ? "" : u.getPath();
+            String nuevo = camino.startsWith("/choferes/") ? "/choferes/"
+                         : camino.startsWith("/handheld") ? PANTALLA : null;
+            if (nuevo != null && !nuevo.equals(inicio())) prefs().edit().putString("inicio", nuevo).apply();
+        }
+
         /* Lo que es del servidor se abre acá; cualquier otro enlace, afuera. */
         @Override
         public boolean shouldOverrideUrlLoading(WebView vista, WebResourceRequest pedido) {
@@ -326,13 +352,18 @@ public class MainActivity extends Activity {
         @Override
         public void onReceivedError(WebView vista, WebResourceRequest pedido, WebResourceError error) {
             if (!pedido.isForMainFrame()) return;
+            String camino = pedido.getUrl().getPath() == null ? "" : pedido.getUrl().getPath();
+            if ("/choferes/".equals(inicio()) && !camino.startsWith("/choferes/")) {
+                vista.loadUrl(servidor() + "/choferes/");
+                return;
+            }
             String html = "<html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
                 + "<style>body{font-family:sans-serif;padding:24px;color:#14243a}"
                 + "button{display:block;width:100%;margin-top:14px;padding:16px;font-size:17px;"
                 + "font-weight:bold;border:0;border-radius:10px;background:#2563eb;color:#fff}"
                 + "button.alt{background:#e9eef4;color:#14243a}</style></head><body>"
                 + "<h2>Sin conexión con el servidor</h2><p>Revisar el wifi o los datos.</p>"
-                + "<button onclick=\"location.href='" + servidor() + PANTALLA + "'\">Reintentar</button>"
+                + "<button onclick=\"location.href='" + servidor() + inicio() + "'\">Reintentar</button>"
                 + "</body></html>";
             vista.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
         }

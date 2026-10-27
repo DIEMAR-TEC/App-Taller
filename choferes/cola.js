@@ -15,18 +15,18 @@ self.Cola = (() => {
   }
   let active;
   async function send(){
-    const r=await fetch('/api/reportes-chofer?op=contexto',{cache:'no-store',redirect:'error'});
+    const r=await fetch('/api/reportes-chofer?op=contexto',{credentials:'same-origin',cache:'no-store',redirect:'error'});
     if(!r.ok) throw Error('Iniciá sesión con la cuenta del reporte para enviar.');
     const user=await r.json();
     const pending=await op('reportes','getAll');
     for(const item of pending){
       if(item.usuario_id!==user.usuario_id || item.enviado) continue;
       try {
-        const res=await fetch('/api/reportes-chofer',{method:'POST',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify({...item,op:'recibir'})});
+        const res=await fetch('/api/reportes-chofer',{method:'POST',credentials:'same-origin',redirect:'error',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({},item,{op:'recibir'}))});
         const ack=await res.json();
         if(!res.ok || ack.id!==item.id || !ack.ok) throw Error(ack.error||'No se confirmó la recepción.');
-        await op('reportes','put',{...item,enviado:true,fotos:[],error:null});
-      } catch(e){if(e instanceof TypeError)e=new Error('No hay conexión con el servidor.');await op('reportes','put',{...item,error:e.message});throw e;}
+        await op('reportes','put',Object.assign({},item,{enviado:true,fotos:[],error:null}));
+      } catch(e){if(e instanceof TypeError)e=new Error('No hay conexión con el servidor.');await op('reportes','put',Object.assign({},item,{error:e.message}));throw e;}
     }
   }
   return {op,sync:()=>active||(active=send().finally(()=>active=null))};
