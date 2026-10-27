@@ -143,6 +143,23 @@ PANTALLAS = {
 }
 
 
+def _vista(cabeceras):
+    """La vista elegida en el celular: 'completa' o vacío (la handheld)."""
+    from http.cookies import SimpleCookie
+    try:
+        galleta = SimpleCookie(cabeceras.get("Cookie") or "")
+    except Exception:
+        return ""
+    return galleta["vista"].value if "vista" in galleta else ""
+
+
+def _cookie_vista(valor, seguro):
+    """La elección dura un año en ese celular; vacía, se borra."""
+    edad = 365 * 86400 if valor else 0
+    return (f"vista={valor}; Path=/; Max-Age={edad}; SameSite=Lax"
+            + ("; Secure" if seguro else ""))
+
+
 def _sin_permiso(modulo, usuario):
     """La página que ve el que abre algo que su rol no tiene.
 
@@ -291,6 +308,26 @@ class App(CupoPorPedido, gom.Handler):
                             "text/html; charset=utf-8", codigo=403)
         return False
 
+    def _en_celular(self):
+        """Si el pedido viene de un teléfono. Las tablets y la APK no: la APK
+        ya abre la handheld, y en una tablet entra el sistema completo."""
+        agente = self.headers.get("User-Agent") or ""
+        return bool(re.search(r"iPhone|iPod|Android.*Mobile|Mobile.*Android|Windows Phone", agente)) \
+            and "TitanHandheld" not in agente
+
+    def _boton_handheld(self):
+        """El acceso de vuelta a la versión handheld, flotando abajo, para quien
+        eligió el sistema completo en el celular."""
+        ruta = self._ruta_pedida()
+        if (not self._en_celular() or _vista(self.headers) != "completa"
+                or ruta.startswith(("/handheld", "/choferes", "/login"))
+                or not permisos.puede_ver(self.usuario, ("repuestos", "gomeria"))):
+            return ""
+        return ('<a href="/handheld?vista=handheld" id="volver-handheld" style="position:fixed;'
+                'left:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:9999;padding:12px 16px;'
+                'border-radius:999px;background:#14243a;color:#fff;font:700 14px Inter,system-ui,'
+                'sans-serif;text-decoration:none;box-shadow:0 4px 14px #0004">Versión handheld</a>')
+
     def _responder(self, cuerpo, tipo="application/json; charset=utf-8", codigo=200, cookie=None):
         # El servicio de pruebas (ENTORNO=pruebas en Render) marca todas las
         # pantallas, el login incluido, para no confundirlo con el real.
@@ -343,6 +380,7 @@ class App(CupoPorPedido, gom.Handler):
             # lo dejaba encima de formularios, tablas y botones de trabajo.
             script = ('<script src="/pengui.js"></script>'
                       if self._ruta_pedida() == "/" else "")
+            script += self._boton_handheld()
             if '</body>' in html:
                 antes, despues = html.rsplit('</body>', 1)
                 cuerpo = antes + script + '</body>' + despues
@@ -414,6 +452,17 @@ class App(CupoPorPedido, gom.Handler):
                     '/choferes/manifest.webmanifest': ('manifest.webmanifest','application/manifest+json'),
                     '/choferes/icon.svg': ('icon.svg','image/svg+xml'),
                     '/choferes/icon.png': ('icon.png','image/png')}
+        # El manifiesto de la handheld: con él, «Agregar a pantalla de
+        # inicio» deja un ícono que abre /handheld como una app. Público: el
+        # navegador lo pide sin la sesión.
+        if ruta == "/handheld.webmanifest":
+            return super()._responder(json.dumps({
+                "id": "/handheld", "name": "Titán Flota", "short_name": "Titán Flota",
+                "start_url": "/handheld", "scope": "/", "display": "standalone",
+                "background_color": "#14243a", "theme_color": "#14243a", "lang": "es-AR",
+                "icons": [{"src": "/choferes/icon.png", "sizes": "512x512", "type": "image/png",
+                           "purpose": "any"}]}, ensure_ascii=False).encode(),
+                "application/manifest+json")
         if ruta in publicos:
             archivo, tipo = publicos[ruta]
             with open(os.path.join(AQUI, 'choferes', archivo), 'rb') as recurso:
@@ -578,6 +627,20 @@ class App(CupoPorPedido, gom.Handler):
                 patente = unquote(ruta.split("/u/", 1)[1])
                 return self._redirigir("/choferes/?patente=" + quote(patente, safe=""))
             return self._redirigir("/choferes/")
+
+        # En el celular, el taller trabaja con la pantalla de la handheld:
+        # escanear la unidad, gomería y stock. «Sistema completo» la cambia
+        # por el sistema de siempre y el celular lo recuerda (cookie vista);
+        # «Versión handheld» vuelve.
+        consulta = parse_qs(urlparse(self.path).query)
+        if ruta == "/" and (consulta.get("vista") or [""])[0] == "completa":
+            return self._redirigir("/", cookie=_cookie_vista("completa", self._es_https()))
+        if ruta == "/handheld" and (consulta.get("vista") or [""])[0] == "handheld":
+            return self._redirigir("/handheld", cookie=_cookie_vista("", self._es_https()))
+        if (ruta == "/" or (ruta == "/movil" and not urlparse(self.path).query)) \
+                and self._en_celular() and _vista(self.headers) != "completa" \
+                and self._sesion() and permisos.puede_ver(self.usuario, ("repuestos", "gomeria")):
+            return self._redirigir("/handheld")
 
         # La historia clínica de la unidad: lo que abre el QR pegado en el
         # camión. La pantalla es la de la handheld, parada en esa unidad.

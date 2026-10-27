@@ -42,6 +42,16 @@ recuerda que terminó ahí: si arranca sin señal, abre ese formulario desde
 la copia guardada en el equipo (service worker) y los reportes se envían
 solos cuando vuelve la conexión.
 
+**En el celular.** Quien tiene Repuestos o Gomería y entra desde un
+teléfono (iPhone o Android; no tablets ni la APK) va a `/handheld` en
+lugar de la portada: el celular se usa como una handheld, escaneando con
+la cámara. Abajo del inicio, **Sistema completo** (`/?vista=completa`)
+pasa al sistema de siempre y el celular lo recuerda un año (cookie
+`vista`); ahí un botón flotante **Versión handheld** vuelve. `/movil` sin
+parámetros también lleva a `/handheld`. Con `/handheld.webmanifest`,
+«Agregar a pantalla de inicio» deja un ícono que abre como app. En la APK
+no aparece el botón de sistema completo.
+
 Usa las mismas API y permisos que Repuestos y Gomería; la pantalla abre
 con el módulo Repuestos o Gomería. Retirar y montar por posición pide
 «gestiona».

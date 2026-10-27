@@ -102,6 +102,9 @@ const ARTS = [
     assert.strictEqual(await page.locator('#v-inicio .tile').count(), 2);
     assert.strictEqual(await page.locator('text=Dirección del servidor').count(), 0);
     assert.strictEqual(await page.locator('a[href="/handheld/qr"]').count(), 0);
+    // En el celular, el acceso al sistema completo.
+    assert.ok(await page.isVisible('#completo'));
+    assert.strictEqual(await page.getAttribute('#completo', 'href'), '/?vista=completa');
 
     // Tipear una patente a mano no dispara la búsqueda letra por letra.
     await page.click('#v-inicio [data-teclado="i-scan"]');
