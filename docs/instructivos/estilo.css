@@ -22,7 +22,7 @@ body { font-family: Inter, "Segoe UI", Arial, sans-serif; color: #14243a; backgr
 .cab.chica .que b { font-size: 12pt; }
 
 /* Portada de la guía */
-.hero { display: flex; align-items: center; gap: 7mm; padding: 4mm 12mm; background: #eaf0f6; }
+.hero { display: flex; align-items: center; gap: 7mm; padding: 4mm 12mm; border-bottom: .3mm solid #e1e6ed; }
 .hero img { width: 74mm; border-radius: 4mm; }
 .hero h1 { font-size: 19pt; line-height: 1.1; margin: 0 0 3mm; letter-spacing: -.4px; }
 .hero p { font-size: 10pt; line-height: 1.4; margin: 0 0 3mm; color: #34465f; }
@@ -43,7 +43,7 @@ body { font-family: Inter, "Segoe UI", Arial, sans-serif; color: #14243a; backgr
 
 /* La handheld: cuerpo gris oscuro, gatillos amarillos a los costados. */
 .handheld { position: relative; width: 36mm; padding: 6mm 2.4mm 9mm; border-radius: 6mm 6mm 8mm 8mm;
-  background: linear-gradient(160deg, #4a525d, #262b32 60%); box-shadow: 0 2mm 4mm #0003; }
+  background: #2f353d; }
 .handheld::before { content: ""; position: absolute; top: 2.3mm; left: 50%; width: 12mm; height: 1.2mm;
   margin-left: -6mm; border-radius: 1mm; background: #15181c; }
 .handheld::after { content: ""; position: absolute; bottom: 3mm; left: 50%; width: 18mm; height: 3mm;
@@ -55,17 +55,17 @@ body { font-family: Inter, "Segoe UI", Arial, sans-serif; color: #14243a; backgr
   object-position: top; border-radius: 1.2mm; background: #fff; }
 
 /* El celular: marco fino negro y la cámara arriba. */
-.celular { position: relative; width: 40mm; padding: 4.6mm 2.2mm 3.2mm; border-radius: 6mm; background: #0b0d10;
-  box-shadow: 0 2mm 4mm #0003; }
+.celular { position: relative; width: 40mm; padding: 4.6mm 2.2mm 3.2mm; border-radius: 6mm; background: #0b0d10; }
 .celular::before { content: ""; position: absolute; top: 1.6mm; left: 50%; width: 7mm; height: 1.5mm;
   margin-left: -3.5mm; border-radius: 1mm; background: #2a2f36; }
 .celular img { border-radius: 4mm; }
 
-.etiqueta { width: 56mm; border-radius: 2mm; box-shadow: 0 1mm 3mm #0002; }
+.etiqueta { width: 56mm; border-radius: 2mm; border: .3mm solid #d4d9e0; }
 .flecha { align-self: center; font-size: 22pt; color: #2563eb; font-weight: 800; }
 
 /* Recuadros */
-.consejos { margin: 0 12mm; padding: 4mm 5mm; border-radius: 3mm; background: #f4f6f8; display: grid;
+.consejos { margin: 0 12mm; padding: 4mm 5mm; border-radius: 3mm; border: .3mm solid #e1e6ed;
+  border-left: 1.2mm solid #2563eb; display: grid;
   grid-template-columns: 1fr 1fr; gap: 2.4mm 6mm; font-size: 9.3pt; line-height: 1.35; }
 .consejos h3 { grid-column: 1 / -1; margin: 0; font-size: 11pt; }
 .consejos b { color: #2563eb; }
