@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#14243a">
+<!-- Agregada a la pantalla de inicio del celular, abre como una app. -->
+<link rel="manifest" href="/handheld.webmanifest">
+<link rel="apple-touch-icon" href="/choferes/icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Titán Flota">
 <title>Handheld | Titán Flota</title>
 <!--
   La pantalla de la terminal con lector (handheld) del depósito y la gomería.
@@ -180,6 +186,8 @@ table.t .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums
       <span><b>Movimiento de stock</b><span>Repuestos que salen o entran.</span></span>
     </button>
   </div>
+  <a class="btn alt" id="completo" href="/?vista=completa" hidden
+     style="text-align:center;text-decoration:none;margin-top:22px">Sistema completo</a>
 </section>
 
 <!-- ---------------------------------------------------- movimiento de stock -->
@@ -1068,6 +1076,9 @@ $('#t-dictar').onclick = () => {
 };
 
 /* ------------------------------------------------------------------ inicio */
+/* En el celular, el acceso al sistema de siempre. En la APK de la terminal
+   no: ahí se trabaja solo con esta pantalla. */
+if (!window.TitanApp) $('#completo').hidden = false;
 fetch('/api/yo', {credentials: 'same-origin'}).then(r => r.ok ? r.json() : null).then(d => {
   if (!d) return;
   YO = d;
