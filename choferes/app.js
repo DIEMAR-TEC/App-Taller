@@ -11,17 +11,26 @@ async function render(){
    a.append(h,p);const small=document.createElement('small');small.textContent=new Date(r.ocurrido_en).toLocaleString()+(r.error?' · '+r.error:'');a.append(small);$('#pending').append(a);
  }
 }
+// Arriba a la derecha: «Salir» con la sesión abierta (para entrar con otro
+// usuario), «Iniciar sesión» sin ella. Antes decía «Inicio», y para el chofer
+// el inicio vuelve acá: no había forma de cerrar la sesión.
+function cuenta(abierta){
+ const a=$('#cuenta');
+ a.textContent=abierta?'Salir':'Iniciar sesión';
+ a.href=abierta?'/salir':'/login';
+}
 async function context(){
  try{
    const r=await fetch('/api/reportes-chofer?op=contexto',{credentials:'same-origin',cache:'no-store',redirect:'error'});
    if(!r.ok){const e=new Error('Sesión no iniciada o sin permiso de choferes.');e.auth=true;throw e;}
    account=await r.json();await Cola.op('config','put',account,'cuenta');
  }catch(e){
-   if(e.auth){account=null;status(e.message);return;}
+   if(e.auth){account=null;status(e.message);cuenta(false);return;}
    account=await Cola.op('config','get','cuenta');
    if(!account){status('Para usar la app sin señal se requiere un primer ingreso con conexión.');return;}
    status('Sin conexión verificada. Los reportes quedarán pendientes para '+account.nombre+'.');
  }
+ cuenta(true);
  $('#session').textContent='Cuenta: '+account.nombre;
  $('#unit').replaceChildren(new Option('Seleccionar unidad',''));
  for(const u of account.unidades)$('#unit').add(new Option(u.patente+(u.interno?' · '+u.interno:''),u.id));
