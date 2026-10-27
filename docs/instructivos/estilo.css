@@ -1,0 +1,28 @@
+/* Instructivos impresos: una hoja A4, letra grande, pasos numerados con la
+   pantalla real al lado. */
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font-family: Inter, "Segoe UI", Arial, sans-serif; color: #14243a; background: #fff; }
+.hoja { width: 210mm; height: 297mm; display: flex; flex-direction: column; overflow: hidden; }
+.cab { background: #14243a; color: #fff; padding: 9mm 12mm 7mm; display: flex; align-items: center; gap: 6mm; }
+.cab img { height: 13mm; }
+.cab .que { margin-left: auto; text-align: right; }
+.cab .que small { display: block; font-size: 9pt; letter-spacing: 2px; text-transform: uppercase; opacity: .7; font-weight: 700; }
+.cab .que b { font-size: 21pt; letter-spacing: -.3px; }
+.hero { display: flex; align-items: center; gap: 6mm; padding: 6mm 12mm 3mm; background: #eaf0f6; }
+.hero img { width: 92mm; border-radius: 4mm; }
+.hero p { font-size: 13pt; line-height: 1.4; margin: 0; }
+.hero p b { display: block; font-size: 17pt; margin-bottom: 2mm; }
+.pasos { flex: 1; display: grid; gap: 4mm; padding: 6mm 12mm 0; grid-template-columns: repeat(3, 1fr); }
+.paso { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.paso .n { width: 11mm; height: 11mm; border-radius: 50%; background: #2563eb; color: #fff; font-weight: 800;
+  font-size: 16pt; display: grid; place-items: center; margin-bottom: 2mm; }
+.paso h2 { font-size: 13pt; margin: 0 0 1.5mm; line-height: 1.2; }
+.paso p { font-size: 10pt; line-height: 1.35; margin: 0 0 3mm; color: #34465f; min-height: 13mm; }
+.paso img { width: 100%; max-height: 100mm; object-fit: cover; object-position: top; border-radius: 3mm;
+  border: 1.2mm solid #14243a; }
+.notas { margin: 5mm 12mm 0; padding: 4mm 5mm; border-radius: 3mm; background: #f4f6f8; display: grid;
+  grid-template-columns: 1fr 1fr; gap: 2mm 6mm; font-size: 9.5pt; line-height: 1.35; }
+.notas b { color: #2563eb; }
+.pie { margin-top: auto; padding: 4mm 12mm 6mm; font-size: 9pt; color: #5a6b80; display: flex; justify-content: space-between; }
