@@ -32,6 +32,13 @@ El inicio tiene tres cosas: el campo para escanear el QR de la unidad,
   95 × 68 mm (8 por A4) con el logo arriba y en el centro del QR (corrección
   de errores H). Sirven con la handheld y con la cámara de un celular.
 
+**Choferes.** Un usuario que tiene «Reportar fallas» y no tiene Repuestos
+ni Gomería (el rol chofer) entra por la misma app y el servidor lo manda a
+`/choferes/`, el formulario de fallas con fotos y cola sin conexión. La APK
+recuerda que terminó ahí: si arranca sin señal, abre ese formulario desde
+la copia guardada en el equipo (service worker) y los reportes se envían
+solos cuando vuelve la conexión.
+
 Usa las mismas API y permisos que Repuestos y Gomería; la pantalla abre
 con el módulo Repuestos o Gomería. Retirar y montar por posición pide
 «gestiona».

@@ -567,6 +567,14 @@ class App(CupoPorPedido, gom.Handler):
                 traceback.print_exc()
                 return self._error(f"No se pudieron armar las etiquetas: {e}", 500)
 
+        # El chofer que abre la app de la handheld va directo a informar
+        # fallas: es lo único que hace, y la pantalla de la handheld no se
+        # le abre (no tiene Repuestos ni Gomería).
+        if (ruta == "/handheld" or ruta.startswith("/handheld/u/")) and self._sesion() \
+                and not permisos.puede_ver(self.usuario, ("repuestos", "gomeria")) \
+                and permisos.puede_ver(self.usuario, "choferes"):
+            return self._redirigir("/choferes/")
+
         # La historia clínica de la unidad: lo que abre el QR pegado en el
         # camión. La pantalla es la de la handheld, parada en esa unidad.
         if ruta.startswith("/handheld/u/"):

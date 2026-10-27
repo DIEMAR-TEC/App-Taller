@@ -3,7 +3,7 @@ const $=s=>document.querySelector(s);
 let account=null, photos=[], recording=null, busy=false;
 const status=m=>$('#status').textContent=m;
 async function render(){
- const rows=(await Cola.op('reportes','getAll')).filter(r=>r.usuario_id===account?.usuario_id).reverse();
+ const rows=(await Cola.op('reportes','getAll')).filter(r=>r.usuario_id===(account&&account.usuario_id)).reverse();
  $('#pending').replaceChildren();
  for(const r of rows){
    const a=document.createElement('article'),h=document.createElement('strong'),p=document.createElement('p');
@@ -13,7 +13,7 @@ async function render(){
 }
 async function context(){
  try{
-   const r=await fetch('/api/reportes-chofer?op=contexto',{cache:'no-store',redirect:'error'});
+   const r=await fetch('/api/reportes-chofer?op=contexto',{credentials:'same-origin',cache:'no-store',redirect:'error'});
    if(!r.ok){const e=new Error('Iniciá sesión con una cuenta habilitada para choferes.');e.auth=true;throw e;}
    account=await r.json();await Cola.op('config','put',account,'cuenta');
  }catch(e){
@@ -65,7 +65,7 @@ $('#report').onsubmit=async e=>{
  if(!item.descripcion)throw Error('Describí la falla.');
  await Cola.op('reportes','put',item);
  $('#report').reset();photos=[];previews();status('Reporte guardado en el teléfono. Pendiente de confirmación del taller.');await render();
- if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.getRegistration('/choferes/');if(reg?.sync)await reg.sync.register('reportes-chofer').catch(()=>{});}
+ if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.getRegistration('/choferes/');if(reg&&reg.sync)await reg.sync.register('reportes-chofer').catch(()=>{});}
  await sync();
  }catch(e){status('No se pudo completar: '+e.message);}finally{$('#save').disabled=false;}
 };
@@ -106,7 +106,7 @@ $('#lookup').onsubmit=async e=>{
  e.preventDefault();const patente=$('#plate').value.trim();if(!patente)return;
  $('#lookup-btn').disabled=true;$('#lookup-status').textContent='Consultando…';$('#results').replaceChildren();
  try{
-   const r=await fetch('/api/reportes-chofer?op=consultar&patente='+encodeURIComponent(patente),{cache:'no-store',redirect:'error'});
+   const r=await fetch('/api/reportes-chofer?op=consultar&patente='+encodeURIComponent(patente),{credentials:'same-origin',cache:'no-store',redirect:'error'});
    const d=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(d.error||(r.status===401||r.status===403?'Sesión no iniciada o sin permiso.':'No se pudo consultar.'));
    $('#lookup-status').textContent=d.reportes.length?d.reportes.length+' reporte(s) para '+d.patente+'.':'Sin reportes para '+d.patente+'.';
