@@ -320,6 +320,40 @@ def movimientos_unidad(cx, unidad_id, limite=60, con_deshechos=False):
     return grupos
 
 
+def listado_movimientos(cx, desde=None, hasta=None, limite=3000):
+    """Todos los movimientos de cubiertas en las unidades entre dos fechas,
+    un renglón por cubierta movida, lo más nuevo arriba. Lo deshecho no
+    aparece: no pasó. Las altas en el depósito, sin unidad, tampoco. Las fechas son días (AAAA-MM-DD) y `hasta` incluye
+    el día entero."""
+    condiciones, valores = ["mv.unidad_id is not null"], []
+    if _historial_soporta_deshacer(cx):
+        condiciones.append("mv.deshecho is null")
+    if desde:
+        condiciones.append("mv.fecha >= %s::date")
+        valores.append(desde)
+    if hasta:
+        condiciones.append("mv.fecha < %s::date + 1")
+        valores.append(hasta)
+    donde = (" where " + " and ".join(condiciones)) if condiciones else ""
+    valores.append(limite)
+    return cx.execute(f"""
+        select mv.id, mv.fecha, mv.tipo, u.patente, u.interno, u.sucursal,
+               c.codigo as cubierta, c.marca, c.medida,
+               po.codigo as desde_posicion, pd.codigo as hasta_posicion,
+               mv.km_unidad, mv.remanente_mm, mv.usuario, mv.nota,
+               pa.texto as texto_original
+        from movimientos mv
+        left join unidades u  on u.id  = mv.unidad_id
+        left join cubiertas c on c.id = mv.cubierta_id
+        left join configuracion_posiciones po on po.id = mv.posicion_origen_id
+        left join configuracion_posiciones pd on pd.id = mv.posicion_destino_id
+        left join partes pa on pa.id = mv.parte_id
+        {donde}
+        order by mv.fecha desc, mv.id desc
+        limit %s
+    """, valores).fetchall()
+
+
 def _por_que_no_se_deshace(grupo):
     """El motivo, en castellano, o None si se puede deshacer."""
     if grupo["deshecho_flag"]:

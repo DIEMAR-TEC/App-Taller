@@ -179,12 +179,13 @@ main{max-width:1800px}.fleet-picker{margin-bottom:14px}.fleet-picker label{displ
 </style>
 <script src="/tema.js"></script></head><body>
 <header class="top"><img src="/logo.png" alt="Titán Flota" onerror="this.style.display='none'"><a class="back" href="/">‹ Inicio</a><span class="brand">Gomería</span><span class="who" id="who"></span></header>
-<nav class="tabs"><button class="tab on" data-tab="fleet">Flota y mapas</button><button class="tab" data-tab="stock">Stock de cubiertas</button><button class="tab" data-tab="retread">Recapado</button><button class="tab" data-tab="wear">Desgaste y costos</button><button class="tab" data-tab="changes">Cambios por eje</button><button class="tab" data-tab="register">Registrar trabajo</button></nav>
+<nav class="tabs"><button class="tab on" data-tab="fleet">Flota y mapas</button><button class="tab" data-tab="stock">Stock de cubiertas</button><button class="tab" data-tab="retread">Recapado</button><button class="tab" data-tab="wear">Desgaste y costos</button><button class="tab" data-tab="changes">Cambios por eje</button><button class="tab" data-tab="moves">Movimientos</button><button class="tab" data-tab="register">Registrar trabajo</button></nav>
 <main><section class="panel on" id="fleet"><div class="card fleet-picker" id="unitPicker"><label for="unitSearch">Elegir unidad <span class="sub" id="unitCount">Cargando…</span></label><div class="picker-box"><input class="search" id="unitSearch" role="combobox" aria-expanded="false" aria-controls="unitList" aria-autocomplete="list" aria-haspopup="listbox" autocomplete="off" placeholder="Buscar patente, interno o sucursal"><button class="picker-abrir" id="unitToggle" type="button" tabindex="-1" aria-label="Ver todas las unidades">▾</button><div class="units" id="unitList" role="listbox" aria-label="Unidades" hidden></div></div></div><p id="benchStatus" role="status"></p><div class="grid"><aside class="card stock-shelf"><h2>Stock de cubiertas</h2><p class="workbench-help">Seleccionar una cubierta o arrastrarla a un casillero vacío. Se muestran hasta 200 resultados; usar el buscador para encontrar otras.</p><input id="shelfSearch" placeholder="Código, marca o medida" aria-label="Buscar cubierta en stock"><div class="drop-stock" id="returnStock">Arrastrar a esta zona la cubierta que se retira.<br><small>Se pedirá destino y motivo.</small></div><div id="shelfList" class="shelf-list"></div></aside><div id="unitDetail"><div class="card loading"><span class="pulse"></span>Cargando mapas…</div></div><aside class="card tire-inspector" id="tireInspector"><h3>Neumático seleccionado</h3><p class="workbench-help">Seleccionar una cubierta del stock o una posición del vehículo.</p></aside></div></section>
 <section class="panel" id="stock"><div class="metrics" id="metrics"></div><div class="card"><div class="stockbar"><div class="filters"><input id="stockSearch" placeholder="Buscar código, marca o medida"><select id="stockState"><option value="">Todos los estados</option><option value="nueva">Nueva</option><option value="usada">Usada</option><option value="a_recapar">A recapar</option><option value="recapada">Recapada</option><option value="recapado">En recapador</option><option value="montada">Montada</option><option value="reparacion">Reparación</option><option value="baja">Baja</option></select><select id="stockDeposito"><option value="">Todas las ubicaciones</option></select><select id="stockFuego"><option value="">Con y sin número de fuego</option><option value="1">Solo sin número de fuego</option></select><select id="stockTipo"><option value="">Todos los tipos</option><option value="direccion">Dirección</option><option value="traccion">Tracción</option><option value="mixta">Mixta</option><option value="-">Sin tipo</option></select></div><button class="btn alt" id="tireFactura">Alta por factura</button><button class="btn" id="newTire">+ Alta de cubierta</button></div><div class="stockbar" id="tipoMasivo" hidden><span class="help" id="tipoMasivoTxt"></span><div class="actions"><select id="tipoMasivoSel"><option value="direccion">Dirección</option><option value="traccion">Tracción</option><option value="mixta">Mixta</option></select><button class="btn alt" id="tipoMasivoOk">Asignar tipo</button></div></div><div class="tablewrap"><table><thead><tr><th>Código</th><th>Estado</th><th>Marca / modelo</th><th>Medida</th><th>Tipo</th><th>Remanente</th><th>Ubicación</th></tr></thead><tbody id="stockRows"></tbody></table></div></div></section>
 <section class="panel" id="retread"><div id="retreadBody"><div class="card loading"><span class="pulse"></span>Cargando el recapado…</div></div></section>
 <section class="panel" id="wear"><div id="wearBody"><div class="card loading"><span class="pulse"></span>Calculando desgaste…</div></div></section>
 <section class="panel" id="changes"><div id="neuBody"><div class="card loading"><span class="pulse"></span>Calculando cambios…</div></div></section>
+<section class="panel" id="moves"><div class="card"><div class="stockbar"><div class="filters movfiltros"><input id="movBuscar" type="search" placeholder="Buscar patente, cubierta o nota"><input id="movDesde" type="date" title="Desde"><input id="movHasta" type="date" title="Hasta"><select id="movTipo"><option value="">Todos los tipos</option></select><select id="movUsuario"><option value="">Todos los usuarios</option></select></div><button class="btn alt" id="movExportar">Exportar CSV</button></div><p class="help" id="movCuenta"></p><div class="tablewrap"><table class="datos"><thead><tr><th>Fecha</th><th>Unidad</th><th>Tipo</th><th>Cubierta</th><th>Posición</th><th class="num">Km</th><th class="num">Remanente</th><th>Usuario</th><th>Nota</th></tr></thead><tbody id="movRows"><tr><td colspan="9" class="emptymsg">Cargando…</td></tr></tbody></table></div></div></section>
 <section class="panel" id="register"><div class="card register"><h1>Registrar trabajo</h1><p class="sub">Revisar la propuesta antes de guardar el movimiento.</p><label for="workSearch">Unidad <span class="help">(opcional si figura en el texto)</span></label><div class="picker-box"><input class="search" id="workSearch" role="combobox" aria-expanded="false" aria-controls="workList" aria-autocomplete="list" aria-haspopup="listbox" autocomplete="off" placeholder="Buscar patente, interno o sucursal"><button class="picker-abrir" id="workToggle" type="button" tabindex="-1" aria-label="Ver todas las unidades">&#9662;</button><div class="units" id="workList" role="listbox" aria-label="Unidades" hidden></div><input type="hidden" id="workUnit"></div><label>Trabajo realizado</label><textarea id="workText" placeholder="Patente: AD 900 UK&#10;3 eje lado izquierdo entran 2 Michelin 079 y 327 recapadas.. salen 2 Fate 380 y 381 para recapar.."></textarea><p class="help">Se escribe como el parte: la patente arriba y debajo qué entra y qué sale, con el número de fuego. Los kilómetros se toman automáticamente de Hawk según la fecha del movimiento.</p><button class="btn" id="interpret">Interpretar movimiento</button><div id="workResult"></div></div></section></main>
 <div class="modalbg" id="tireModal"><div class="modal"><div class="modaltop"><h2 id="tireTitle">Cubierta</h2><button class="close" data-close="tireModal">×</button></div><div id="tireBody"></div></div></div>
 <div class="modalbg" id="measureModal"><div class="modal"><div class="modaltop"><h2 id="measureTitle">Medir dibujo</h2><button class="close" data-close="measureModal">×</button></div><p class="sub">Milímetros remanentes. Determinan la alerta y el costo por milímetro.</p><div class="formgrid"><div><label>Remanente (mm)</label><input id="mMm" type="number" min="0" max="40" step=".5"></div></div><div id="measureError"></div><button class="btn" id="saveMeasure">Guardar medición</button></div></div>
@@ -205,10 +206,10 @@ main{max-width:1800px}.fleet-picker{margin-bottom:14px}.fleet-picker label{displ
 "use strict";const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtPat=p=>{let m=String(p||'').match(/^([A-Z]{2})(\d{3})([A-Z]{2})$/);if(m)return`${m[1]} ${m[2]} ${m[3]}`;m=String(p||'').match(/^([A-Z]{3})(\d{3})$/);return m?`${m[1]} ${m[2]}`:p},fmtDate=v=>v?new Date(v).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
 let D={units:[],configs:[],tires:[],summary:{},user:null,selected:null,parte:null,wear:null,alertaDe:{},tocada:null,unidadId:null,movimientos:[],historial:[],verDeshechos:false};async function api(url,body){let r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{}),d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.error||`Error ${r.status}`);return d}
-function tab(n,marcar=true){$$('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab===n));$$('.panel').forEach(x=>x.classList.toggle('on',x.id===n));if(n==='stock'&&!D.tires.length)loadStock();if(n==='wear'&&!D.wear)loadWear();if(n==='changes'&&!D.neu)loadNeu();if(n==='retread'&&!D.rec)loadRec();if(marcar&&location.hash.slice(1)!==n)window.history.replaceState(null,'','#'+n)}$$('.tab').forEach(x=>x.onclick=()=>tab(x.dataset.tab));
+function tab(n,marcar=true){$$('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab===n));$$('.panel').forEach(x=>x.classList.toggle('on',x.id===n));if(n==='stock'&&!D.tires.length)loadStock();if(n==='wear'&&!D.wear)loadWear();if(n==='changes'&&!D.neu)loadNeu();if(n==='retread'&&!D.rec)loadRec();if(n==='moves'&&!D.movs)loadMovs();if(marcar&&location.hash.slice(1)!==n)window.history.replaceState(null,'','#'+n)}$$('.tab').forEach(x=>x.onclick=()=>tab(x.dataset.tab));
 /* La solapa vive en la direccion: /gomeria#register abre directo la carga de
    texto, que es a donde apunta el QR del taller. Volver atras la respeta. */
-const SOLAPAS=['fleet','stock','retread','wear','changes','register'];
+const SOLAPAS=['fleet','stock','retread','wear','changes','moves','register'];
 function solapaDeLaUrl(){const h=location.hash.slice(1);return SOLAPAS.includes(h)?h:null}
 addEventListener('hashchange',()=>{const h=solapaDeLaUrl();if(h)tab(h,false)});
 /* El buscador de unidad es un desplegable: la lista aparece sobre la
@@ -1234,6 +1235,59 @@ $('#ncGuardar').onclick=async()=>{
   finally{b.disabled=false}};
 
 async function dashboard(){let d=await api('/api/tablero');D.units=d.unidades;D.summary=d.resumen_stock;renderUnits();metrics();pintarWork();await loadWear();if(!D.selected&&D.units.length){let m=location.pathname.match(/\/u\/([^/]+)/);D.selected=m?decodeURIComponent(m[1]):D.units[0].patente}if(D.selected)await selectUnit(D.selected)}async function catalogoDeGomeria(){try{const d=await api('/api/marcas');$('#catMarcas').innerHTML=(d.marcas||[]).map(m=>`<option value="${esc(m.nombre)}">`).join('');$('#catMedidas').innerHTML=(d.medidas||[]).map(m=>`<option value="${esc(m.medida)}">${esc(m.descripcion||'')}</option>`).join('')}catch(e){/* sin 31_marcas_medidas.sql: los campos siguen siendo libres */}}
+/* =====================================================================
+   MOVIMIENTOS: todo lo que se cargó sobre las unidades, con filtros.
+   El rango de fechas lo pide a la base; el resto filtra lo ya traído.
+   ===================================================================== */
+const movFecha=v=>v?new Date(v).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+const isoDia=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+function movFiltrados(){
+  const txt=$('#movBuscar').value.trim().toUpperCase(),plano=txt.replace(/[^A-Z0-9]/g,'');
+  const tipo=$('#movTipo').value,usu=$('#movUsuario').value;
+  return (D.movs||[]).filter(m=>{
+    if(tipo&&m.tipo!==tipo)return false;
+    if(usu&&(m.usuario||'')!==usu)return false;
+    if(!txt)return true;
+    if(plano&&String(m.patente||'').includes(plano))return true;
+    return [m.interno,m.cubierta,m.marca,m.medida,m.desde_posicion,m.hasta_posicion,m.nota,m.texto_original,m.sucursal]
+      .some(v=>String(v||'').toUpperCase().includes(txt));
+  });
+}
+function pintarMovs(){
+  const f=movFiltrados(),total=(D.movs||[]).length;
+  $('#movCuenta').textContent=(f.length===total?`${total} movimientos`:`${f.length} de ${total} movimientos`)+(total>=3000?' · se muestran los 3000 más recientes del rango':'');
+  $('#movRows').innerHTML=f.length?f.slice(0,1000).map(m=>{
+    const pos=[m.desde_posicion,m.hasta_posicion].filter(Boolean).map(esc).join(' → ');
+    return `<tr><td>${esc(movFecha(m.fecha))}</td><td class="fuerte">${esc(fmtPat(m.patente))}${m.interno?' <span class="flojo">int. '+esc(m.interno)+'</span>':''}</td><td><span class="status ${esc(m.tipo)}">${esc(TIPOS[m.tipo]||m.tipo)}</span></td><td>${m.cubierta?'<b>'+esc(m.cubierta)+'</b>':'—'}${m.marca?' <span class="flojo">'+esc(m.marca)+'</span>':''}</td><td>${pos||'—'}</td><td class="num">${m.km_unidad!=null?nfmt(m.km_unidad):'—'}</td><td class="num">${m.remanente_mm!=null?esc(m.remanente_mm)+' mm':'—'}</td><td class="flojo">${esc(m.usuario||'—')}</td><td class="flojo">${esc(m.nota||'')}</td></tr>`}).join('')
+    :'<tr><td colspan="9" class="emptymsg">No hay movimientos que entren en ese filtro.</td></tr>';
+}
+async function loadMovs(){
+  if(!$('#movDesde').value){const h=new Date(),d=new Date();d.setDate(d.getDate()-30);$('#movDesde').value=isoDia(d);$('#movHasta').value=isoDia(h)}
+  $('#movRows').innerHTML='<tr><td colspan="9" class="emptymsg">Cargando…</td></tr>';
+  try{
+    const q=new URLSearchParams({desde:$('#movDesde').value,hasta:$('#movHasta').value});
+    D.movs=(await api('/api/movimientos-listado?'+q)).movimientos||[];
+  }catch(e){D.movs=[];$('#movRows').innerHTML=`<tr><td colspan="9" class="emptymsg error">${esc(e.message)}</td></tr>`;return}
+  const tipos=$('#movTipo'),antesT=tipos.value;
+  tipos.innerHTML='<option value="">Todos los tipos</option>'+[...new Set(D.movs.map(m=>m.tipo))].sort().map(t=>`<option value="${esc(t)}">${esc(TIPOS[t]||t)}</option>`).join('');
+  tipos.value=antesT;
+  const usu=$('#movUsuario'),antesU=usu.value,yo=D.user&&D.user.nombre;
+  const nombres=[...new Set(D.movs.map(m=>m.usuario).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  if(yo&&!nombres.includes(yo))nombres.unshift(yo);
+  usu.innerHTML='<option value="">Todos los usuarios</option>'+nombres.map(n=>`<option value="${esc(n)}">${esc(n)}${n===yo?' (sesión actual)':''}</option>`).join('');
+  usu.value=antesU;
+  pintarMovs();
+}
+['#movBuscar','#movTipo','#movUsuario'].forEach(s=>$(s).addEventListener('input',pintarMovs));
+['#movDesde','#movHasta'].forEach(s=>$(s).addEventListener('change',loadMovs));
+$('#movExportar').onclick=()=>{
+  const f=movFiltrados();if(!f.length)return;
+  const c=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const filas=[['Fecha','Patente','Interno','Tipo','Cubierta','Marca','Medida','Desde','Hasta','Km','Remanente mm','Usuario','Nota','Texto del parte']]
+    .concat(f.map(m=>[movFecha(m.fecha),m.patente,m.interno,TIPOS[m.tipo]||m.tipo,m.cubierta,m.marca,m.medida,m.desde_posicion,m.hasta_posicion,m.km_unidad,m.remanente_mm,m.usuario,m.nota,m.texto_original]));
+  const blob=new Blob(['\ufeff'+filas.map(r=>r.map(c).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`movimientos-gomeria-${isoDia(new Date())}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
 async function init(){const inicial=solapaDeLaUrl();if(inicial)tab(inicial,false);try{D.user=await api('/api/yo');$('#who').innerHTML=`${esc(D.user.nombre)} <a href="/salir">Salir</a>`;if(!D.user.puede_administrar)$('#newTire').style.display='none';catalogoDeGomeria();await dashboard()}catch(e){$('#unitDetail').innerHTML=`<div class="card error">${esc(e.message)}</div>`}}
 
 </script><script src="/gomeria-mesa.js"></script><script>init();</script></body></html>
