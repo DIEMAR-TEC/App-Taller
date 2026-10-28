@@ -10,7 +10,7 @@ conexión a la base viven acá, nunca en el celular.
     export ANTHROPIC_API_KEY=sk-ant-...
     python3 servidor.py --host 0.0.0.0
 """
-import argparse, json, os, sys, traceback
+import argparse, json, os, re, sys, traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs, unquote
 
@@ -193,6 +193,23 @@ class Handler(BaseHTTPRequestHandler):
                             cx, unidad_id, con_deshechos=deshechos)}))
             except ValueError:
                 return self._error("Unidad inválida.")
+            except Exception as e:
+                traceback.print_exc()
+                return self._error(str(e), 500)
+
+        if ruta == "/api/movimientos-listado":
+            # Todos los movimientos de la flota, para la solapa
+            # Movimientos: el rango de fechas lo filtra la base; patente,
+            # tipo, usuario y texto, la pantalla.
+            desde = (params.get("desde") or [""])[0].strip() or None
+            hasta = (params.get("hasta") or [""])[0].strip() or None
+            patron = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+            if any(f and not patron.match(f) for f in (desde, hasta)):
+                return self._error("Fecha inválida.")
+            try:
+                with base.conectar() as cx:
+                    return self._responder(jstr({
+                        "movimientos": base.listado_movimientos(cx, desde, hasta)}))
             except Exception as e:
                 traceback.print_exc()
                 return self._error(str(e), 500)
