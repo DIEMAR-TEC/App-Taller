@@ -685,6 +685,29 @@ class App(CupoPorPedido, gom.Handler):
                 traceback.print_exc()
                 return self._error(f"No se pudieron armar los QR: {e}", 500)
 
+        # Los mismos QR por unidad, pedidos desde Flota: toda la flota
+        # activa o las patentes elegidas en la solapa QR, sin el cartel de
+        # gomería.
+        if ruta == "/unidades/qr":
+            if not self._exigir_sesion():
+                return
+            if not permisos.gestiona(self.usuario):
+                return self._responder(_sin_permiso("QR de unidades", self.usuario),
+                                       "text/html; charset=utf-8", codigo=403)
+            crudo = (parse_qs(urlparse(self.path).query).get("patentes") or [""])[0]
+            patentes = [p.strip().upper().replace(" ", "")
+                        for p in crudo.split(",") if p.strip()]
+            try:
+                with base.conectar() as cx:
+                    esquema = "https" if self._es_https() else "http"
+                    origen = f"{esquema}://{self.headers.get('Host', '')}"
+                    pagina = etiquetas.cartel_handheld(cx, origen, patentes=patentes or None,
+                                                       trabajo=False, volver="/unidades#qr")
+                return self._responder(pagina.encode(), "text/html; charset=utf-8")
+            except Exception as e:
+                traceback.print_exc()
+                return self._error(f"No se pudieron armar los QR: {e}", 500)
+
         # Lo que deja un QR escaneado: la pantalla de repuestos parada en
         # ese código. Cuál es lo resuelve la propia página con la dirección.
         if ruta.startswith("/repuestos/"):
