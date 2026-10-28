@@ -310,7 +310,7 @@ def hoja(cx, base, rubro=None, codigos=None):
 """
 
 
-def cartel_handheld(cx, base):
+def cartel_handheld(cx, base, patentes=None, trabajo=True, volver=None):
     """El QR de «registrar trabajo», para la gomería, y uno por unidad,
     para pegar en cada camión: abre su registro (datos, gomería y stock).
     Sirven igual desde la handheld y desde la cámara de un celular.
@@ -318,11 +318,20 @@ def cartel_handheld(cx, base):
     Las de los camiones son más grandes que las de los repuestos —95 × 68
     mm, ocho por hoja A4— y llevan el logo arriba y en el centro del QR:
     se leen a un metro y se reconocen como del sistema.
+
+    Con `patentes` salen solo esas, estén activas o no; sin ellas, toda la
+    flota activa. `trabajo=False` deja afuera el cartel de gomería: desde
+    Flota se imprimen solo los de las unidades.
     """
     base = base.rstrip("/")
-    unidades = cx.execute("""
-        select patente, interno from unidades where activa
-        order by patente""").fetchall()
+    if patentes:
+        unidades = cx.execute("""
+            select patente, interno from unidades where patente = any(%s)
+            order by patente""", [list(patentes)]).fetchall()
+    else:
+        unidades = cx.execute("""
+            select patente, interno from unidades where activa
+            order by patente""").fetchall()
     marca = _logo()
 
     def tarjeta(u):
@@ -339,8 +348,13 @@ def cartel_handheld(cx, base):
       {_qr(base + "/handheld#v-trabajo", icono=True)}
       <h1>Movimiento de gomería</h1>
       <p>Escanear para cargar el trabajo escrito o dictado.</p></div></div>"""
+    if not trabajo:
+        grande = ""
     selector, script = _formato("Hoja A4 · 95 × 68 mm")
     chicas = "\n".join(tarjeta(u) for u in unidades)
+    titulo = f"{len(unidades)} QR de unidad{'' if len(unidades) == 1 else 'es'}"
+    enlace = (f'<a class="volver" href="{html.escape(volver)}">‹ Volver</a>'
+              if volver else "")
     return f"""<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"><title>QR de unidades | Titán Flota</title>
 <style>
@@ -351,6 +365,7 @@ def cartel_handheld(cx, base):
     padding: 12px 20px; background: #12161a; color: #edf0f2; }}
   .barra a, .barra button {{ color: #fff; background: #2563eb; border: 0; border-radius: 9px;
     padding: 9px 15px; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }}
+  .barra .volver {{ background: #20262c; }}
   .hoja {{ width: 210mm; margin: 14px auto; padding: 8mm; background: #fff; }}
   .grande {{ text-align: center; padding: 8mm 0; break-after: page; }}
   .grande .dm {{ height: 16mm; }}
@@ -378,7 +393,7 @@ def cartel_handheld(cx, base):
   body.rollo .et .txt b {{ font-size: 14pt; }}
 </style></head>
 <body>
-<div class="barra"><b>QR de unidades</b>
+<div class="barra">{enlace}<b>{titulo}</b>
   {selector}
   <button onclick="print()">Imprimir</button>
   <span class="nota" id="nota-formato" style="margin-left:auto;color:#8d959e;font-size:12px">95 × 68 mm · 8 por hoja A4</span></div>
