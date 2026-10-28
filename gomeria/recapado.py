@@ -43,6 +43,14 @@ def tope(cx):
         return TOPE_POR_DEFECTO
 
 
+_SOLO_A_RECAPAR = "and c.condicion = 'a_recapar'"
+
+
+def _hay_condicion(cx):
+    """Si la base ya corrió 53_estados_y_depositos.sql."""
+    return base.hay_columna(cx, "cubiertas", "condicion")
+
+
 # =====================================================================
 # LECTURA
 # =====================================================================
@@ -53,12 +61,14 @@ def listar(cx, usuario=None):
             "select * from v_recapado_envios limit 200").fetchall()],
         "afuera": [dict(a) for a in cx.execute(
             "select * from v_recapado_afuera").fetchall()],
-        # Las que se pueden mandar: están en el depósito y les queda vida.
-        "candidatas": [dict(c) for c in cx.execute("""
+        # Las que se pueden mandar: están en el depósito marcadas «a
+        # recapar» y les queda vida.
+        "candidatas": [dict(c) for c in cx.execute(f"""
             select c.id, c.codigo, c.marca, c.modelo, c.medida, c.recapados,
                    c.remanente_mm, c.codigo_provisorio
             from cubiertas c
             where c.estado = 'stock' and c.recapados < %s
+              {_SOLO_A_RECAPAR if _hay_condicion(cx) else ''}
             order by c.remanente_mm nulls last, c.codigo""",
             (tope(cx),)).fetchall()],
         "tope": tope(cx),
@@ -122,8 +132,9 @@ def enviar(cx, datos, usuario=None):
         raise ValueError("Hay una cubierta repetida en el remito.")
 
     limite = tope(cx)
-    elegidas = cx.execute("""
-        select id, codigo, estado, recapados, remanente_mm
+    condicion = "condicion" if _hay_condicion(cx) else "null as condicion"
+    elegidas = cx.execute(f"""
+        select id, codigo, estado, recapados, remanente_mm, {condicion}
         from cubiertas where id = any(%s)""", (ids,)).fetchall()
     porid = {c["id"]: c for c in elegidas}
 
@@ -137,6 +148,10 @@ def enviar(cx, datos, usuario=None):
             raise ValueError(
                 f"La cubierta {c['codigo']} está en «{c['estado']}» y no en el "
                 f"depósito. Solo se manda a recapar lo que está en stock.")
+        if c.get("condicion") and c["condicion"] != "a_recapar":
+            raise ValueError(
+                f"La cubierta {c['codigo']} no está marcada «a recapar». "
+                f"Cambiarle el estado desde su ficha antes de enviarla.")
         if (c["recapados"] or 0) >= limite:
             raise ValueError(
                 f"La cubierta {c['codigo']} ya lleva {c['recapados']} recapados "
@@ -215,6 +230,9 @@ def recibir(cx, datos, usuario=None):
                         renglon["id"]))
             cx.execute("update cubiertas set estado = 'stock' where id = %s",
                        (cubierta_id,))
+            if _hay_condicion(cx):
+                cx.execute("update cubiertas set condicion = 'usada' where id = %s",
+                           (cubierta_id,))
             base._log(cx, uuid.uuid4(), "recapado", cubierta_id=cubierta_id,
                       usuario=(usuario or {}).get("nombre"),
                       nota=f"Vuelve sin recapar · {motivo} · remito {envio_id}")

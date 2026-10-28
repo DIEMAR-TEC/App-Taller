@@ -439,6 +439,46 @@
     </div>
 
     <div class="caja">
+      <h2>Depósitos</h2>
+      <p class="que">Lugares físicos donde se guardan cubiertas y repuestos. El uso define
+        qué se guarda en cada uno. La ubicación de cada cubierta se cambia desde su ficha
+        en Gomería.</p>
+      <p class="aviso mal" id="deposito-falta-sql" hidden>Falta correr
+        gomeria/53_estados_y_depositos.sql en Supabase.</p>
+      <div class="fila" style="margin:0 0 14px">
+        <button class="btn" id="deposito-nuevo">+ Nuevo depósito</button>
+      </div>
+
+      <form id="deposito-form" hidden style="background:var(--surface-2);
+        border:1px solid var(--hairline-2);border-radius:12px;padding:15px;margin-bottom:16px">
+        <div class="campos">
+          <div><label>Nombre</label><input id="p-nombre" maxlength="120"
+            placeholder="Buenos Aires" required></div>
+          <div><label>Uso</label><select id="p-uso">
+            <option value="ambos">Cubiertas y repuestos</option>
+            <option value="cubiertas">Cubiertas</option>
+            <option value="repuestos">Repuestos</option>
+          </select></div>
+          <div class="ancho"><label>Dirección</label><input id="p-direccion" maxlength="300"></div>
+          <div class="ancho">
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;
+              font-size:13px;letter-spacing:0">
+              <input type="checkbox" id="p-activo" checked style="width:auto">
+              Activo</label></div>
+        </div>
+        <div class="fila">
+          <button class="btn" type="submit">Guardar depósito</button>
+          <button class="btn alt" type="button" id="deposito-cancelar">Cancelar</button>
+        </div>
+      </form>
+
+      <table><thead><tr>
+        <th>Depósito</th><th>Uso</th><th class="num">Cubiertas</th><th>Estado</th><th></th>
+      </tr></thead><tbody id="depositos"></tbody></table>
+      <p class="vacio" id="depositos-vacio" hidden>Sin depósitos cargados.</p>
+    </div>
+
+    <div class="caja">
       <h2>Stock mínimo de cubiertas</h2>
       <p class="que">Cantidad mínima en el depósito por medida, marca, tipo y condición. Por
         debajo del mínimo se genera una alerta. Marca, tipo o condición sin especificar
@@ -1037,8 +1077,53 @@ function pintarGomeria() {
         ${m.cubiertas ? '' : `<button class="accion" data-borrar-medida="${m.id}">Borrar</button>`}` : ''}</td>
     </tr>`).join('');
   $('#medidas-vacio').hidden = d.medidas.length > 0;
+  pintarDepositos();
   pintarStockMinimo();
 }
+
+/* Depósitos: null si la base no corrió 53_estados_y_depositos.sql. */
+const USO_DEPOSITO = {ambos: 'Cubiertas y repuestos', cubiertas: 'Cubiertas',
+                      repuestos: 'Repuestos'};
+function pintarDepositos() {
+  const lista = G.datos.depositos;
+  const puede = !!G.datos.puede_gestionar && lista != null;
+  $('#deposito-falta-sql').hidden = lista != null;
+  $('#deposito-nuevo').disabled = !puede;
+  $('#depositos').innerHTML = (lista || []).map(x => `
+    <tr>
+      <td><b>${esc(x.nombre)}</b>${x.direccion ? `<div class="chico">${esc(x.direccion)}</div>` : ''}</td>
+      <td>${esc(USO_DEPOSITO[x.uso] || x.uso)}</td>
+      <td class="num">${x.cubiertas}</td>
+      <td>${x.activo ? '<span class="marca preventivo">activo</span>'
+                     : '<span class="chico">de baja</span>'}</td>
+      <td>${puede ? `<button class="accion" data-deposito="${x.id}">Editar</button>
+        ${x.cubiertas ? '' : `<button class="accion" data-borrar-deposito="${x.id}">Borrar</button>`}` : ''}</td>
+    </tr>`).join('');
+  $('#depositos-vacio').hidden = !lista || lista.length > 0;
+}
+
+function formDeposito(dep) {
+  G.deposito = dep;
+  $('#deposito-form').hidden = false;
+  $('#p-nombre').value = dep ? dep.nombre : '';
+  $('#p-uso').value = (dep && dep.uso) || 'ambos';
+  $('#p-direccion').value = (dep && dep.direccion) || '';
+  $('#p-activo').checked = dep ? !!dep.activo : true;
+  $('#p-nombre').focus();
+}
+
+$('#deposito-form').onsubmit = async e => {
+  e.preventDefault();
+  const datos = {nombre: $('#p-nombre').value, uso: $('#p-uso').value,
+                 direccion: $('#p-direccion').value, activo: $('#p-activo').checked};
+  if (G.deposito) { datos.id = G.deposito.id; datos.orden = G.deposito.orden; }
+  try {
+    await apiMarcas('deposito_guardar', datos);
+    $('#deposito-form').hidden = true;
+    await cargarGomeria();
+    aviso('Depósito guardado.', true);
+  } catch (err) { aviso(err.message); }
+};
 
 /* Stock mínimo: una regla por combinación de medida, marca, tipo y
    condición. El servidor devuelve cuántas hay hoy de cada una. */
@@ -1173,6 +1258,18 @@ document.addEventListener('click', async ev => {
   if (ev.target.id === 'marca-cancelar') { $('#marca-form').hidden = true; return; }
   if (ev.target.id === 'medida-nueva') return formMedida(null);
   if (ev.target.id === 'medida-cancelar') { $('#medida-form').hidden = true; return; }
+  if (ev.target.id === 'deposito-nuevo') return formDeposito(null);
+  if (ev.target.id === 'deposito-cancelar') { $('#deposito-form').hidden = true; return; }
+  const editarD = ev.target.closest('[data-deposito]');
+  if (editarD)
+    return formDeposito(G.datos.depositos.find(x => String(x.id) === editarD.dataset.deposito));
+  const borrarD = ev.target.closest('[data-borrar-deposito]');
+  if (borrarD) {
+    if (!confirm('¿Borrar el depósito?')) return;
+    try { await apiMarcas('deposito_borrar', {id: borrarD.dataset.borrarDeposito}); await cargarGomeria(); }
+    catch (e) { aviso(e.message); }
+    return;
+  }
   if (ev.target.id === 'stock-nueva') return formStock(null);
   if (ev.target.id === 'stock-cancelar') { $('#stock-form').hidden = true; return; }
   const editarS = ev.target.closest('[data-stock]');

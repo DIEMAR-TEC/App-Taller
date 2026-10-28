@@ -17,6 +17,7 @@ escrito en el código.
 import base64
 import re
 
+import depositos
 import permisos
 import stock_minimo
 
@@ -284,7 +285,8 @@ def aplicar(cx, datos, usuario=None):
     op = (datos.get("op") or "").strip()
     acciones = {"guardar": guardar, "borrar": borrar, "borrar_logo": borrar_logo,
                 "medida_guardar": guardar_medida, "medida_borrar": borrar_medida,
-                "stock_guardar": stock_minimo.guardar, "stock_borrar": stock_minimo.borrar}
+                "stock_guardar": stock_minimo.guardar, "stock_borrar": stock_minimo.borrar,
+                "deposito_guardar": depositos.guardar, "deposito_borrar": depositos.borrar}
     if op in acciones:
         return acciones[op](cx, datos, usuario)
     raise ValueError("No entiendo qué hay que hacer con la marca.")

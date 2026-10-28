@@ -1,0 +1,84 @@
+/* Guías rápidas de Titán Fleet Management. A4 vertical, una sección por
+   paso, con la pantalla real del sistema adentro de una handheld o de un
+   celular. Sin datos de ninguna empresa: sirven para cualquier cliente. */
+@page { size: A4 portrait; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font-family: Inter, "Segoe UI", Arial, sans-serif; color: #14243a; background: #fff;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.pagina { width: 210mm; height: 297mm; position: relative; overflow: hidden; display: flex;
+  flex-direction: column; break-after: page; }
+.pagina:last-child { break-after: auto; }
+
+/* Encabezado */
+.cab { background: #14243a; color: #fff; padding: 6mm 12mm; display: flex; align-items: center; }
+.cab img { height: 12mm; }
+.cab .que { margin-left: auto; text-align: right; }
+.cab .que small { display: block; font-size: 8.5pt; letter-spacing: 2.2px; text-transform: uppercase;
+  color: #8fb3ff; font-weight: 800; }
+.cab .que b { font-size: 20pt; letter-spacing: -.3px; }
+.cab.chica { padding: 4mm 12mm; }
+.cab.chica img { height: 7mm; }
+.cab.chica .que b { font-size: 12pt; }
+
+/* Portada de la guía */
+.hero { display: flex; align-items: center; gap: 7mm; padding: 4mm 12mm; border-bottom: .3mm solid #e1e6ed; }
+.hero img { width: 74mm; border-radius: 4mm; }
+.hero h1 { font-size: 19pt; line-height: 1.1; margin: 0 0 3mm; letter-spacing: -.4px; }
+.hero p { font-size: 10pt; line-height: 1.4; margin: 0 0 3mm; color: #34465f; }
+.chips { display: flex; gap: 2mm; flex-wrap: wrap; }
+.chip { background: #2563eb; color: #fff; border-radius: 99px; padding: 1.4mm 3.4mm; font-size: 9.5pt; font-weight: 800; }
+.chip.osc { background: #14243a; }
+
+/* Secciones */
+.cuerpo { flex: 1; padding: 4mm 12mm 0; display: flex; flex-direction: column; gap: 3mm; }
+.sec h2 { display: flex; align-items: center; gap: 3mm; font-size: 14pt; margin: 0 0 2.5mm; }
+.sec h2 .n { flex: none; width: 9mm; height: 9mm; border-radius: 50%; background: #2563eb; color: #fff;
+  display: grid; place-items: center; font-size: 13pt; }
+.fila { display: flex; gap: 5mm; justify-content: center; align-items: flex-start; }
+.item { display: flex; flex-direction: column; align-items: center; text-align: center; width: 46mm; }
+.item p { font-size: 8.6pt; line-height: 1.35; margin: 2.5mm 0 0; color: #34465f; }
+.item p b { color: #14243a; }
+.item.ancho { width: 62mm; }
+
+/* La handheld: cuerpo gris oscuro, gatillos amarillos a los costados. */
+.handheld { position: relative; width: 36mm; padding: 6mm 2.4mm 9mm; border-radius: 6mm 6mm 8mm 8mm;
+  background: #2f353d; }
+.handheld::before { content: ""; position: absolute; top: 2.3mm; left: 50%; width: 12mm; height: 1.2mm;
+  margin-left: -6mm; border-radius: 1mm; background: #15181c; }
+.handheld::after { content: ""; position: absolute; bottom: 3mm; left: 50%; width: 18mm; height: 3mm;
+  margin-left: -9mm; border-radius: 1.5mm; background: #1a1e23; }
+.handheld .gatillo { position: absolute; top: 26mm; width: 1.4mm; height: 12mm; background: #f2c94c;
+  border-radius: 1mm; }
+.handheld .gatillo.i { left: -1.2mm; } .handheld .gatillo.d { right: -1.2mm; }
+.handheld img, .celular img { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover;
+  object-position: top; border-radius: 1.2mm; background: #fff; }
+
+/* El celular: marco fino negro y la cámara arriba. */
+.celular { position: relative; width: 40mm; padding: 4.6mm 2.2mm 3.2mm; border-radius: 6mm; background: #0b0d10; }
+.celular::before { content: ""; position: absolute; top: 1.6mm; left: 50%; width: 7mm; height: 1.5mm;
+  margin-left: -3.5mm; border-radius: 1mm; background: #2a2f36; }
+.celular img { border-radius: 4mm; }
+
+.etiqueta { width: 56mm; border-radius: 2mm; border: .3mm solid #d4d9e0; }
+.flecha { align-self: center; font-size: 22pt; color: #2563eb; font-weight: 800; }
+
+/* Recuadros */
+.consejos { margin: 0 12mm; padding: 4mm 5mm; border-radius: 3mm; border: .3mm solid #e1e6ed;
+  border-left: 1.2mm solid #2563eb; display: grid;
+  grid-template-columns: 1fr 1fr; gap: 2.4mm 6mm; font-size: 9.3pt; line-height: 1.35; }
+.consejos h3 { grid-column: 1 / -1; margin: 0; font-size: 11pt; }
+.consejos b { color: #2563eb; }
+.pasitos { margin: 0; padding: 0; list-style: none; font-size: 9pt; line-height: 1.4; }
+.pasitos li { display: flex; gap: 2mm; margin-bottom: 2mm; text-align: left; }
+.pasitos li span { flex: none; width: 5.5mm; height: 5.5mm; border-radius: 50%; background: #14243a; color: #fff;
+  font-size: 8pt; font-weight: 800; display: grid; place-items: center; margin-top: .3mm; }
+.pie { margin-top: auto; padding: 3mm 12mm 5mm; font-size: 8.5pt; color: #5a6b80; display: flex;
+  justify-content: space-between; align-items: center; border-top: .3mm solid #e1e6ed; }
+.pie img { height: 5mm; }
+
+/* En la guía del taller entran tres equipos por fila: el celular, más chico. */
+.celular.chico { width: 33mm; padding: 4mm 1.8mm 2.8mm; }
+/* Dos celulares por fila: entran más grandes. */
+.celular.grande { width: 47mm; }
+.item.grande { width: 60mm; }

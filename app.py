@@ -55,6 +55,7 @@ import proveedores as prov
 import enganches as eng
 import marcas as mcs
 import stock_minimo as stm
+import depositos as dep
 import parametros as par
 import permisos
 import lateral as lat
@@ -69,6 +70,16 @@ import viento
 import viento_indicadores
 import servidor as gom
 from flota_vales.http import atender as atender_vales
+
+# ENTORNO=pruebas solo en el servicio de la rama DEMO-Y-PRUEBAS, que corre
+# contra la base de pruebas. El real no la tiene y no muestra nada.
+ES_PRUEBAS = os.environ.get("ENTORNO", "").strip().lower() == "pruebas"
+AVISO_PRUEBAS = (
+    '<div id="aviso-pruebas" style="position:fixed;bottom:12px;right:12px;'
+    'z-index:99999;background:#D97706;color:#fff;font:700 12px/1 system-ui,'
+    'sans-serif;letter-spacing:.08em;padding:7px 12px;border-radius:6px;'
+    'box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none">'
+    'PRUEBAS · BASE DE PRUEBA</div>')
 
 # Cada dirección con el archivo que le toca. Todas piden sesión.
 PANTALLAS = {
@@ -319,6 +330,15 @@ class App(CupoPorPedido, gom.Handler):
                 'sans-serif;text-decoration:none;box-shadow:0 4px 14px #0004">Versión handheld</a>')
 
     def _responder(self, cuerpo, tipo="application/json; charset=utf-8", codigo=200, cookie=None):
+        # El servicio de pruebas (ENTORNO=pruebas en Render) marca todas las
+        # pantallas, el login incluido, para no confundirlo con el real.
+        if tipo.startswith("text/html") and ES_PRUEBAS:
+            html = cuerpo.decode("utf-8") if isinstance(cuerpo, bytes) else cuerpo
+            if 'id="aviso-pruebas"' not in html:
+                cabeza = re.search(r"<body[^>]*>", html)
+                if cabeza:
+                    html = html[:cabeza.end()] + AVISO_PRUEBAS + html[cabeza.end():]
+            cuerpo = html
         # Incluye las pantallas servidas por el manejador de Gomería.
         if tipo.startswith("text/html") and getattr(self, "usuario", None):
             html = cuerpo.decode("utf-8") if isinstance(cuerpo, bytes) else cuerpo
@@ -1118,6 +1138,9 @@ class App(CupoPorPedido, gom.Handler):
                     if todas:
                         salida["stock_minimo"] = (stm.reglas(cx) if stm.instalado(cx)
                                                   else None)
+                        # Los depósitos. Sin 53_estados_y_depositos.sql, null.
+                        salida["depositos"] = (dep.listar(cx, True) if dep.instalado(cx)
+                                               else None)
                     return self._responder(gom.jstr(salida))
             except (psycopg.errors.UndefinedTable, psycopg.errors.UndefinedColumn) as e:
                 return self._error(base.que_falta(e,

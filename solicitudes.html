@@ -34,6 +34,18 @@
   main{max-width:1320px;margin:auto;padding:20px}
   h1{margin:0;font-size:24px;font-weight:600;letter-spacing:-.02em}
   .sub{color:var(--ink-muted);margin:5px 0 18px}
+  .navigation{display:flex;gap:30px;border-bottom:1px solid var(--hairline-2);margin:14px 0 20px}
+  .navigation a{display:flex;gap:18px;align-items:center;padding:0 2px 13px;text-decoration:none;
+    font-size:13px;font-weight:600;color:var(--ink-muted);border-bottom:3px solid transparent}
+  .navigation a.active{color:var(--ink);border-color:var(--brand)}
+  .navigation span{font-size:10px;color:#8795a3}
+  @media(max-width:760px){.navigation{gap:20px}.navigation a{font-size:12px;gap:6px}}
+  .falla{background:var(--surface-1);border:1px solid var(--hairline-2);border-radius:12px;
+    padding:14px 16px;margin-bottom:10px}
+  .falla h3{margin:0 0 4px;font-size:15px}
+  .falla small{color:var(--ink-muted)}
+  .falla .fotos img{max-width:220px;max-height:220px;border-radius:8px;margin:8px 8px 0 0}
+  .falla form{display:grid;gap:6px;max-width:460px;margin-top:10px}
 
   .tarjetas{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
   .tarjeta{background:var(--surface-1);border:1px solid var(--hairline);
@@ -191,12 +203,32 @@
 <header class="top">
   <img src="/logo.png" alt="Titán Flota" onerror="this.style.display='none'">
   <a class="back" href="/">‹ Inicio</a>
-  <span class="brand">Solicitudes de orden de compra</span>
+  <span class="brand">Solicitudes</span>
   <span class="who" id="quien"></span>
 </header>
 
 <main>
-  <h1>Solicitudes de orden de compra</h1><p><a class="solapa" href="/fallas">Fallas de choferes →</a></p>
+  <h1 id="titulo-vista">Solicitudes de orden de compra</h1>
+  <nav class="navigation" aria-label="Secciones de solicitudes">
+    <a href="#sucursales" data-modulo="sucursales">Sucursales <span>01</span></a>
+    <a href="#choferes" data-modulo="choferes">Choferes <span>02</span></a>
+  </nav>
+
+  <section id="modulo-choferes" hidden>
+    <p class="sub" id="fallas-pie">Cargando…</p>
+    <div class="barra">
+      <select id="fallas-filtro">
+        <option value="PENDIENTE">Pendientes</option>
+        <option value="">Todos</option>
+        <option value="DESESTIMADA">Desestimadas</option>
+        <option value="ORDEN_CREADA">Con orden de trabajo</option>
+      </select>
+      <button class="btn alt" id="fallas-actualizar">Actualizar</button>
+    </div>
+    <div id="fallas-lista"></div>
+  </section>
+
+  <div id="modulo-sucursales">
   <p class="sub" id="pie">Cargando…</p>
 
   <div class="tarjetas">
@@ -237,6 +269,7 @@
       <tbody id="filas"><tr><td colspan="8" class="vacio">Cargando…</td></tr></tbody>
     </table>
     <div id="panelIndicadores" hidden></div>
+  </div>
   </div>
 </main>
 
@@ -825,6 +858,115 @@ $('#vUnidad').addEventListener('change', e => {
   const km = e.target.selectedOptions[0] && e.target.selectedOptions[0].dataset.km;
   if (km && !$('#vKm').value) $('#vKm').value = km;
 });
+
+/* ---------------------------------------------------------------------
+   MÓDULOS: sucursales (solicitudes de compra) y choferes (fallas que
+   reportan desde el celular). Las fallas se cargan al abrir la solapa.
+   --------------------------------------------------------------------- */
+const F = {filas: [], gestiona: false, cargado: false};
+const TITULOS = {sucursales: 'Solicitudes de orden de compra', choferes: 'Fallas de choferes'};
+
+async function apiFallas(ruta = '', body) {
+  const r = await fetch('/api/reportes-chofer' + ruta, body
+    ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)}
+    : {cache: 'no-store'});
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || 'No se pudo completar.');
+  return d;
+}
+
+function nodo(tag, texto, clase) {
+  const n = document.createElement(tag);
+  if (texto != null) n.textContent = texto;
+  if (clase) n.className = clase;
+  return n;
+}
+
+function pintarFallas() {
+  const lista = $('#fallas-lista'), filtro = $('#fallas-filtro').value;
+  lista.replaceChildren();
+  for (const r of F.filas.filter(r => !filtro || r.estado === filtro)) {
+    const a = nodo('article', null, 'falla');
+    a.append(nodo('h3', r.patente + ' · ' + r.estado.replaceAll('_', ' ')),
+      nodo('small', r.chofer + ' · ' + new Date(r.ocurrido_en).toLocaleString('es-AR') +
+        ' · ' + String(r.urgencia || '').replaceAll('_', ' ')),
+      nodo('p', r.descripcion));
+    if (r.motivo) a.append(nodo('p', 'Motivo: ' + r.motivo));
+    if (r.orden_id) {
+      const link = nodo('a', 'Abrir OT ' + (r.orden_numero || r.orden_id));
+      link.href = '/ordenes?orden=' + r.orden_id;
+      a.append(link);
+    }
+    if (r.fotos) {
+      const b = nodo('button', 'Ver fotos (' + r.fotos + ')', 'btn alt'), fotos = nodo('div', null, 'fotos');
+      b.onclick = async () => {
+        b.disabled = true;
+        try {
+          const fs = await apiFallas('?op=fotos&id=' + r.id);
+          fotos.replaceChildren(...fs.map(f => {
+            const img = nodo('img'); img.alt = 'Foto de la falla';
+            img.src = 'data:' + f.mime + ';base64,' + f.datos; return img;
+          }));
+        } catch (e) { $('#fallas-pie').textContent = e.message; }
+        finally { b.disabled = false; }
+      };
+      a.append(b, fotos);
+    }
+    if (F.gestiona && r.estado === 'PENDIENTE') {
+      const form = nodo('form'), km = nodo('input'), motivo = nodo('textarea');
+      const ot = nodo('button', 'Crear orden de trabajo', 'btn'),
+            no = nodo('button', 'Desestimar solicitud', 'btn alt');
+      km.type = 'number'; km.min = '0'; km.step = '1'; km.id = 'km-' + r.id;
+      motivo.maxLength = 2000; motivo.id = 'motivo-' + r.id;
+      const kl = nodo('label', 'Kilometraje para la OT'), ml = nodo('label', 'Motivo para desestimar');
+      kl.htmlFor = km.id; ml.htmlFor = motivo.id;
+      ot.type = no.type = 'button';
+      const resolver = async op => {
+        ot.disabled = no.disabled = true;
+        try {
+          if (op === 'crear_orden' && (!km.value || !km.checkValidity()))
+            throw new Error('Indicar un kilometraje válido.');
+          await apiFallas('', {op, id: r.id, km: km.value, motivo: motivo.value});
+          await cargarFallas();
+        } catch (e) { $('#fallas-pie').textContent = e.message; }
+        finally { ot.disabled = no.disabled = false; }
+      };
+      ot.onclick = () => resolver('crear_orden');
+      no.onclick = () => resolver('desestimar');
+      form.append(kl, km, ot, ml, motivo, no);
+      a.append(form);
+    }
+    lista.append(a);
+  }
+  if (!lista.children.length) lista.append(nodo('p', 'Sin reportes en este estado.', 'sub'));
+}
+
+async function cargarFallas() {
+  try {
+    const c = await apiFallas('?op=contexto');
+    F.gestiona = !!c.gestiona;
+    F.filas = await apiFallas();
+    F.cargado = true;
+    pintarFallas();
+    $('#fallas-pie').textContent = F.filas.length + ' reportes (hasta los últimos 500).';
+  } catch (e) { $('#fallas-pie').textContent = e.message; }
+}
+$('#fallas-filtro').onchange = pintarFallas;
+$('#fallas-actualizar').onclick = cargarFallas;
+
+function verModulo() {
+  const modulo = location.hash === '#choferes' ? 'choferes' : 'sucursales';
+  document.querySelectorAll('[data-modulo]').forEach(a => {
+    a.classList.toggle('active', a.dataset.modulo === modulo);
+    a.setAttribute('aria-current', a.dataset.modulo === modulo ? 'page' : 'false');
+  });
+  $('#modulo-sucursales').hidden = modulo !== 'sucursales';
+  $('#modulo-choferes').hidden = modulo !== 'choferes';
+  $('#titulo-vista').textContent = TITULOS[modulo];
+  if (modulo === 'choferes' && !F.cargado) cargarFallas();
+}
+window.addEventListener('hashchange', verModulo);
+verModulo();
 
 cargar();
 </script>

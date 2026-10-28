@@ -19,7 +19,7 @@ sys.path.insert(0, AQUI)
 
 import anthropic
 import auth
-import permisos, base, desgaste, interpretar, mapas, neumaticos, recapado
+import permisos, base, depositos, desgaste, interpretar, mapas, neumaticos, recapado
 
 # Por acá entran fotos de facturas: la factura del recapador y las de
 # compra. Son las únicas rutas con el techo alto.
@@ -173,6 +173,8 @@ class Handler(BaseHTTPRequestHandler):
                         "cubiertas": base.inventario_cubiertas(cx),
                         "resumen": base.resumen_cubiertas(cx),
                         "sin_fuego": base.sin_fuego(cx),
+                        "depositos": (depositos.listar(cx) if depositos.instalado(cx)
+                                      else []),
                     }))
             except Exception as e:
                 traceback.print_exc()
@@ -562,6 +564,10 @@ class Handler(BaseHTTPRequestHandler):
                     usuario=self.usuario["nombre"], nota="Alta desde el inventario")
                 if datos.get("tipo"):
                     base.cambiar_tipo(cx, [cubierta_id], datos.get("tipo"))
+                if (datos.get("condicion") in base.CONDICIONES
+                        and base.hay_columna(cx, "cubiertas", "condicion")):
+                    cx.execute("update cubiertas set condicion = %s where id = %s",
+                               (datos["condicion"], cubierta_id))
             elif op == "estado":
                 cubierta_id = int(datos.get("id") or 0)
                 base.cambiar_estado_cubierta(
@@ -600,6 +606,10 @@ class Handler(BaseHTTPRequestHandler):
                 cubierta_id = int(datos.get("id") or 0)
                 base.cambiar_codigo(cx, cubierta_id, datos.get("codigo"),
                                     usuario=self.usuario["nombre"])
+            elif op == "deposito":
+                cubierta_id = int(datos.get("id") or 0)
+                base.cambiar_deposito(cx, cubierta_id, int(datos.get("deposito_id") or 0),
+                                      usuario=self.usuario["nombre"])
             elif op == "tipo":
                 # Para qué eje está hecha: de a una desde la ficha, o de a
                 # muchas desde la lista filtrada del stock.

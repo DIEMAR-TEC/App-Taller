@@ -92,3 +92,20 @@ El chat sigue corriendo donde vos digas, con la base local. Los datos de los
   alcanzaba con que probar una contraseña fuera lento.
 - Las claves de la base y de la API viven en las variables de entorno de
   Render, nunca en el repositorio.
+
+## Servicio de pruebas (rama DEMO-Y-PRUEBAS)
+
+Un segundo servicio de Render, separado del real, para probar sin tocar la
+información de producción.
+
+- **Rama:** `DEMO-Y-PRUEBAS`.
+- **Base:** proyecto de Supabase aparte (`titanapp-pruebas`), con la misma
+  estructura y datos inventados. La base real (`titanapp`) no se usa.
+- **Variables de entorno:**
+  - `SUPABASE_DB_URL`: la cadena de conexión de `titanapp-pruebas`
+    (Connect → Connection String → Session pooler).
+  - `ENTORNO=pruebas`: muestra el cartel «PRUEBAS · BASE DE PRUEBA» en
+    todas las pantallas.
+  - `USUARIO_INICIAL`, `ANTHROPIC_API_KEY` y las demás, igual que en el real.
+- Las tareas programadas de GitHub (combustible, odómetros, viajes) corren
+  desde `main` y escriben solo en la base real.

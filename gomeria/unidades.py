@@ -1294,8 +1294,8 @@ def mover_cubierta(cx, datos, usuario=None):
                               (cubierta_id,)).fetchone()
         if not cubierta:
             raise ValueError("Esa cubierta no existe.")
-        if cubierta["estado"] not in ("stock", "recapado"):
-            raise ValueError("La cubierta no está disponible en stock.")
+        if cubierta["estado"] != "stock":
+            raise ValueError("La cubierta no está disponible en el depósito.")
         # Una cubierta puesta en otra unidad no se puede poner acá sin
         # sacarla antes: quedaría en dos lugares a la vez.
         otra = cx.execute("""
@@ -1345,7 +1345,9 @@ def _con_medidas(cx, unidad):
 
 
 def stock_para(cx, medida=None, limite=200, buscar=None):
-    """Las cubiertas que se pueden poner: en stock o recapadas, y libres.
+    """Las cubiertas que se pueden poner: en el depósito y libres.
+
+    Las que están en lo del recapador no: físicamente no están.
 
     El estado no alcanza para saber si está libre. Los mapas se cargaron a
     mano y hay cubiertas marcadas 'stock' que en realidad están puestas: lo
@@ -1366,7 +1368,7 @@ def stock_para(cx, medida=None, limite=200, buscar=None):
         select c.id, c.codigo, c.marca, c.modelo, c.medida, c.remanente_mm,
                c.recapados, c.estado
         from cubiertas c
-        where c.estado in ('stock','recapado')
+        where c.estado = 'stock'
           and not exists (select 1 from montajes m
                            where m.cubierta_id = c.id and m.hasta is null)
           {filtro}
