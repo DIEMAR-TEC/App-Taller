@@ -55,6 +55,7 @@ import proveedores as prov
 import enganches as eng
 import marcas as mcs
 import stock_minimo as stm
+import depositos as dep
 import parametros as par
 import permisos
 import lateral as lat
@@ -1137,6 +1138,9 @@ class App(CupoPorPedido, gom.Handler):
                     if todas:
                         salida["stock_minimo"] = (stm.reglas(cx) if stm.instalado(cx)
                                                   else None)
+                        # Los depósitos. Sin 53_estados_y_depositos.sql, null.
+                        salida["depositos"] = (dep.listar(cx, True) if dep.instalado(cx)
+                                               else None)
                     return self._responder(gom.jstr(salida))
             except (psycopg.errors.UndefinedTable, psycopg.errors.UndefinedColumn) as e:
                 return self._error(base.que_falta(e,

@@ -558,42 +558,82 @@ def kilometros_por_montaje(cx, cubierta_id):
     """, (cubierta_id,)).fetchall()
 
 
+def _deposito_sql(cx):
+    """El nombre del depósito, si la base ya corrió 53_estados_y_depositos.sql."""
+    if hay_columna(cx, "cubiertas", "deposito_id"):
+        return ("d.nombre as deposito",
+                "left join depositos d on d.id = c.deposito_id")
+    return ("null::text as deposito", "")
+
+
+def estado_visible(c):
+    """Lo que la pantalla muestra como estado.
+
+    En el depósito, la condición de la goma (nueva, usada, a recapar,
+    recapada): «stock» dice dónde está, no cómo está. Fuera del depósito,
+    dónde está: montada, en el recapador, en reparación o de baja.
+    """
+    if c.get("estado") != "stock":
+        return c.get("estado")
+    return c.get("condicion") or (
+        "recapada" if (c.get("recapados") or 0) > 0 else "nueva")
+
+
 def inventario_cubiertas(cx):
     """Inventario completo, incluida la ubicacion actual si esta montada."""
-    return cx.execute("""
-        select c.*, u.patente, p.codigo as posicion, m.desde as montada_desde
+    columna, union = _deposito_sql(cx)
+    filas = cx.execute(f"""
+        select c.*, u.patente, p.codigo as posicion, m.desde as montada_desde,
+               {columna}
         from cubiertas c
         left join montajes m on m.cubierta_id = c.id and m.hasta is null
         left join unidades u on u.id = m.unidad_id
         left join configuracion_posiciones p on p.id = m.posicion_id
+        {union}
         order by case c.estado
                    when 'stock' then 1 when 'montada' then 2
                    when 'reparacion' then 3 when 'recapado' then 4 else 5 end,
                  c.codigo
     """).fetchall()
+    for f in filas:
+        f["estado_visible"] = estado_visible(f)
+    return filas
+
+
+ESTADOS_VISIBLES = ("nueva", "usada", "a_recapar", "recapada", "recapado",
+                    "montada", "reparacion", "baja")
 
 
 def resumen_cubiertas(cx):
-    filas = cx.execute("""
-        select estado, count(*)::int as cantidad
-        from cubiertas group by estado
+    condicion = ("c.condicion" if hay_columna(cx, "cubiertas", "condicion")
+                 else "case when coalesce(c.recapados, 0) > 0 then 'recapada' "
+                      "else 'nueva' end")
+    filas = cx.execute(f"""
+        select case when c.estado = 'stock' then {condicion} else c.estado end
+                 as estado,
+               count(*)::int as cantidad
+        from cubiertas c group by 1
     """).fetchall()
-    resumen = {estado: 0 for estado in ('stock', 'montada', 'reparacion', 'recapado', 'baja')}
+    resumen = {estado: 0 for estado in ESTADOS_VISIBLES}
     resumen.update({f["estado"]: f["cantidad"] for f in filas})
     return resumen
 
 
 def ficha_cubierta(cx, cubierta_id):
-    cubierta = cx.execute("""
-        select c.*, u.patente, p.codigo as posicion, m.desde as montada_desde
+    columna, union = _deposito_sql(cx)
+    cubierta = cx.execute(f"""
+        select c.*, u.patente, p.codigo as posicion, m.desde as montada_desde,
+               {columna}
         from cubiertas c
         left join montajes m on m.cubierta_id = c.id and m.hasta is null
         left join unidades u on u.id = m.unidad_id
         left join configuracion_posiciones p on p.id = m.posicion_id
+        {union}
         where c.id = %s
     """, (cubierta_id,)).fetchone()
     if not cubierta:
         return None
+    cubierta["estado_visible"] = estado_visible(cubierta)
     montajes_km = kilometros_por_montaje(cx, cubierta_id)
     calculados = [m for m in montajes_km if m["km_recorridos"] is not None]
     cubierta["km_hawk_total"] = float(sum(m["km_recorridos"] for m in calculados))
@@ -826,8 +866,31 @@ def asignar_configuracion(cx, unidad_id, configuracion_id):
     return fila["patente"]
 
 
+CONDICIONES = ("nueva", "usada", "a_recapar", "recapada")
+NOMBRE_ESTADO = {"nueva": "Nueva", "usada": "Usada", "a_recapar": "A recapar",
+                 "recapada": "Recapada", "recapado": "En recapador",
+                 "montada": "Montada", "reparacion": "Reparación",
+                 "baja": "Baja", "stock": "Depósito"}
+
+
 def cambiar_estado_cubierta(cx, cubierta_id, estado, usuario=None, nota=None):
-    permitidos = {'stock', 'reparacion', 'recapado', 'baja'}
+    """Cambia el estado de una cubierta que no está montada.
+
+    Nueva, usada, a recapar y recapada son condiciones de una goma que
+    está en el depósito: el estado queda 'stock' y cambia la condición.
+    «En recapador» no se elige acá: es lo que sale con un envío.
+    """
+    # Lo que se mandaba «a recapado» a mano no está en lo del recapador:
+    # está esperando el envío.
+    if estado == "recapado":
+        estado = "a_recapar"
+    if estado in CONDICIONES:
+        if not hay_columna(cx, "cubiertas", "condicion"):
+            raise ValueError("Falta correr gomeria/53_estados_y_depositos.sql en Supabase.")
+        condicion, estado = estado, "stock"
+    else:
+        condicion = None
+    permitidos = {'stock', 'reparacion', 'baja'}
     if estado not in permitidos:
         raise ValueError("Estado de cubierta invalido.")
     cubierta = cx.execute("select * from cubiertas where id = %s",
@@ -838,18 +901,47 @@ def cambiar_estado_cubierta(cx, cubierta_id, estado, usuario=None, nota=None):
                          (cubierta_id,)).fetchone()
     if montada:
         raise ValueError("La cubierta está montada. Registrar primero el desmontaje.")
+    if cubierta["estado"] == "recapado" and estado != "baja":
+        raise ValueError("La cubierta está en el recapador. Se recibe desde la "
+                         "solapa Recapado, con su remito.")
     cx.execute("""
         update cubiertas set estado = %s,
           fecha_baja = case when %s = 'baja' then current_date else null end,
           motivo_baja = case when %s = 'baja' then %s else null end
         where id = %s
     """, (estado, estado, estado, nota, cubierta_id))
-    tipo = {'reparacion': 'reparacion', 'recapado': 'recapado',
-            'baja': 'baja'}.get(estado, 'desmontaje')
+    if condicion:
+        cx.execute("update cubiertas set condicion = %s where id = %s",
+                   (condicion, cubierta_id))
+        _log(cx, uuid.uuid4(), "estado", cubierta_id=cubierta_id, usuario=usuario,
+             nota=" · ".join(filter(None, [NOMBRE_ESTADO[condicion], nota])))
+        return
+    tipo = {'reparacion': 'reparacion', 'baja': 'baja'}.get(estado, 'desmontaje')
     _log(cx, uuid.uuid4(), tipo, cubierta_id=cubierta_id,
          usuario=usuario, nota=nota)
     if estado == 'baja':
         _cerrar_vida(cx, cubierta_id, nota or 'baja')
+
+
+def cambiar_deposito(cx, cubierta_id, deposito_id, usuario=None):
+    """Mueve una cubierta de un depósito a otro."""
+    if not hay_columna(cx, "cubiertas", "deposito_id"):
+        raise ValueError("Falta correr gomeria/53_estados_y_depositos.sql en Supabase.")
+    deposito = cx.execute("select id, nombre from depositos where id = %s and activo",
+                          (deposito_id,)).fetchone()
+    if not deposito:
+        raise ValueError("Ese depósito no existe.")
+    actual = cx.execute("""select c.estado, d.nombre from cubiertas c
+                           left join depositos d on d.id = c.deposito_id
+                           where c.id = %s""", (cubierta_id,)).fetchone()
+    if not actual:
+        raise ValueError("La cubierta no existe.")
+    if actual["nombre"] == deposito["nombre"]:
+        return
+    cx.execute("update cubiertas set deposito_id = %s where id = %s",
+               (deposito["id"], cubierta_id))
+    _log(cx, uuid.uuid4(), "estado", cubierta_id=cubierta_id, usuario=usuario,
+         nota=f"Depósito: {actual['nombre'] or '—'} → {deposito['nombre']}")
 
 
 def _cerrar_vida(cx, cubierta_id, motivo):

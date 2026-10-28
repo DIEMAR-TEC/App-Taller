@@ -40,13 +40,15 @@ class Base:
     def __init__(self, cubiertas=None, tope=3, pendientes=0, movidas=0):
         self.cubiertas = cubiertas or [
             {"id": 1, "codigo": "4521", "estado": "stock", "recapados": 1,
-             "remanente_mm": 4},
+             "remanente_mm": 4, "condicion": "a_recapar"},
             {"id": 2, "codigo": "4522", "estado": "stock", "recapados": 0,
-             "remanente_mm": 5},
+             "remanente_mm": 5, "condicion": "a_recapar"},
             {"id": 3, "codigo": "STK-R007", "estado": "montada", "recapados": 1,
-             "remanente_mm": 6},
+             "remanente_mm": 6, "condicion": "recapada"},
             {"id": 4, "codigo": "9999", "estado": "stock", "recapados": 3,
-             "remanente_mm": 2},
+             "remanente_mm": 2, "condicion": "a_recapar"},
+            {"id": 5, "codigo": "4530", "estado": "stock", "recapados": 0,
+             "remanente_mm": 9, "condicion": "usada"},
         ]
         self.tope = tope
         self.pendientes = pendientes
@@ -60,6 +62,8 @@ class Base:
     def execute(self, consulta, valores=()):
         sql = " ".join(consulta.split())
         self.consultas.append((sql, valores))
+        if sql.startswith("select 1 as hay from information_schema.columns"):
+            return Resultado({"hay": 1})
         if sql.startswith("select recapados_maximo from parametros"):
             return Resultado({"recapados_maximo": self.tope})
         if sql.startswith("select id, codigo, estado, recapados, remanente_mm"):
@@ -124,6 +128,11 @@ class Enviar(unittest.TestCase):
         porid = {r[1]: r for r in cx.renglones}
         self.assertEqual(porid[1][2], 4)      # remanente
         self.assertEqual(porid[1][3], 1)      # recapados al salir
+
+    def test_solo_se_manda_la_marcada_a_recapar(self):
+        """La usada que nadie separó para recapar no sale en el remito."""
+        with self.assertRaisesRegex(ValueError, "a recapar"):
+            self.enviar(cubiertas=[1, 5])
 
     def test_la_montada_no_se_puede_mandar(self):
         with self.assertRaisesRegex(ValueError, "montada|dep.sito|stock"):
