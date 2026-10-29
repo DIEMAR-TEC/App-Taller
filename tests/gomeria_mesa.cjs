@@ -244,7 +244,7 @@ const {chromium}=require('playwright');const fs=require('fs'),path=require('path
  await page.click('[data-tab="stock"]');
  assert.deepEqual(await page.locator('#catMarcas option').evaluateAll(o=>o.map(x=>x.value)),['Fate','Michelin']);
  assert.deepEqual(await page.locator('#catMedidas option').evaluateAll(o=>o.map(x=>x.value)),['295/80R22.5']);
- assert.equal(await page.locator('#nBrand').getAttribute('list'),'catMarcas');
+ await page.click('#newTire');assert.equal(await page.locator('#altaGrupos [data-k="marca"]').getAttribute('list'),'catMarcas');await page.click('[data-close="newModal"]');
  await page.click('[data-tab="fleet"]');await page.waitForFunction(()=>V.ruedas.length>0);
  // Quien pidió menos movimiento en su sistema no ve ninguno.
  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.map [data-pos="2"]').click();

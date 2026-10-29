@@ -552,6 +552,33 @@ class Handler(BaseHTTPRequestHandler):
         if self.usuario["rol"] not in ("encargado", "admin"):
             raise PermissionError("Solo un encargado o administrador puede hacer ese cambio.")
 
+    def _alta_cubierta(self, cx, codigo, datos):
+        """Una cubierta nueva en el stock, con los datos del formulario."""
+        remanente = datos.get("remanente_mm")
+        if remanente not in (None, ""):
+            remanente = float(remanente)
+            if remanente < 0:
+                raise ValueError("El remanente no puede ser negativo.")
+        costo = datos.get("costo_compra")
+        if costo not in (None, ""):
+            costo = float(costo)
+            if costo < 0:
+                raise ValueError("El costo no puede ser negativo.")
+        cubierta_id = base.alta_cubierta(
+            cx, codigo, marca=str(datos.get("marca") or "").strip() or None,
+            modelo=str(datos.get("modelo") or "").strip() or None,
+            medida=str(datos.get("medida") or "").strip() or None,
+            remanente_mm=remanente, costo_compra=costo, cargar_a_unidad=True,
+            observaciones=str(datos.get("observaciones") or "").strip() or None,
+            usuario=self.usuario["nombre"], nota="Alta desde el inventario")
+        if datos.get("tipo"):
+            base.cambiar_tipo(cx, [cubierta_id], datos.get("tipo"))
+        if (datos.get("condicion") in base.CONDICIONES
+                and base.hay_columna(cx, "cubiertas", "condicion")):
+            cx.execute("update cubiertas set condicion = %s where id = %s",
+                       (datos["condicion"], cubierta_id))
+        return cubierta_id
+
     def _cubiertas(self, datos):
         self._exigir_encargado()
         op = (datos.get("op") or "").strip()
@@ -562,29 +589,36 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("Ingresar el código o número de fuego.")
                 if base.buscar_cubierta(cx, codigo):
                     raise ValueError("Ya existe una cubierta con ese código.")
-                remanente = datos.get("remanente_mm")
-                if remanente not in (None, ""):
-                    remanente = float(remanente)
-                    if remanente < 0:
-                        raise ValueError("El remanente no puede ser negativo.")
-                costo = datos.get("costo_compra")
-                if costo not in (None, ""):
-                    costo = float(costo)
-                    if costo < 0:
-                        raise ValueError("El costo no puede ser negativo.")
-                cubierta_id = base.alta_cubierta(
-                    cx, codigo, marca=str(datos.get("marca") or "").strip() or None,
-                    modelo=str(datos.get("modelo") or "").strip() or None,
-                    medida=str(datos.get("medida") or "").strip() or None,
-                    remanente_mm=remanente, costo_compra=costo, cargar_a_unidad=True,
-                    observaciones=str(datos.get("observaciones") or "").strip() or None,
-                    usuario=self.usuario["nombre"], nota="Alta desde el inventario")
-                if datos.get("tipo"):
-                    base.cambiar_tipo(cx, [cubierta_id], datos.get("tipo"))
-                if (datos.get("condicion") in base.CONDICIONES
-                        and base.hay_columna(cx, "cubiertas", "condicion")):
-                    cx.execute("update cubiertas set condicion = %s where id = %s",
-                               (datos["condicion"], cubierta_id))
+                cubierta_id = self._alta_cubierta(cx, codigo, datos)
+            elif op == "alta_lote":
+                # Varias cubiertas de una vez: cada grupo trae los datos en
+                # común y la lista de números de fuego. Se revisa todo antes
+                # de escribir: o entran todas, o ninguna.
+                grupos = datos.get("grupos") or []
+                if not isinstance(grupos, list) or not grupos:
+                    raise ValueError("No hay cubiertas para dar de alta.")
+                vistos, repetidos, existentes, altas = set(), [], [], []
+                for g in grupos:
+                    codigos = [str(c or "").strip().upper() for c in (g.get("codigos") or [])]
+                    codigos = [c for c in codigos if c]
+                    if not codigos:
+                        raise ValueError("Cada tipo de cubierta necesita al menos un número de fuego.")
+                    for c in codigos:
+                        if c in vistos:
+                            repetidos.append(c)
+                        vistos.add(c)
+                        if base.buscar_cubierta(cx, c):
+                            existentes.append(c)
+                        altas.append((c, g))
+                if repetidos:
+                    raise ValueError("Números de fuego repetidos en la carga: "
+                                     + ", ".join(sorted(set(repetidos))) + ".")
+                if existentes:
+                    raise ValueError("Ya existen en el stock: " + ", ".join(existentes) + ".")
+                if len(altas) > 500:
+                    raise ValueError("Máximo 500 cubiertas por carga.")
+                for c, g in altas:
+                    cubierta_id = self._alta_cubierta(cx, c, g)
             elif op == "estado":
                 cubierta_id = int(datos.get("id") or 0)
                 base.cambiar_estado_cubierta(
