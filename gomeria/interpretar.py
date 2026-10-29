@@ -10,7 +10,7 @@ Claude recibe el mapa de la unidad con lo que tiene puesto ahora, así
 razona sobre posiciones que existen de verdad y no sobre un modelo
 genérico de camión.
 """
-import json, os
+import json, os, re
 import anthropic
 
 import ia
@@ -161,6 +161,10 @@ Casi siempre llega con la patente en la primera línea y el trabajo abajo:
 Eso se lee así:
 - La patente ya está resuelta, es la unidad de arriba. No la vuelvas a mirar.
 - Los números sueltos (079, 327, 380, 381) son números de fuego de cubiertas.
+- Una letra I o E pegada al número ("321E", "287I") dice si va afuera
+  (exterior) o adentro (interior) en el dual: NO es parte del número de
+  fuego. En 'cubierta' va solo el número (321, 287) y la letra se usa para
+  elegir la posición (3DE, 1II).
   La palabra de al lado (Michelin, Fate) es la marca: va en la nota, nunca
   en el campo cubierta.
 - "entran" son las que se montan, "salen" las que se sacan. Las que salen
@@ -283,6 +287,9 @@ def aplicar(cx, unidad, propuesta, parte_id=None, usuario=None, base=None):
         if c:
             return c, False
         codigo = str(a["cubierta"]).strip().upper()
+        # «999E»: la letra es la posición en el dual, no el número.
+        if re.fullmatch(r"\d+[IE]", codigo):
+            codigo = codigo[:-1]
         base.alta_cubierta(cx, codigo, marca=(a.get("marca") or None),
                            medida=(a.get("medida") or None), usuario=usuario,
                            nota="Alta automática al cargar un parte.")

@@ -498,7 +498,18 @@ def buscar_cubierta_flexible(cx, codigo):
 
     Si el número da con más de una cubierta no elige ninguna: avisa cuáles
     son para que lo escriba completo.
+
+    En el parte la letra pegada al número dice la posición en el dual, no
+    es parte del número: «287I» es la 287 puesta adentro, «165E» la 165
+    afuera. Se busca primero el número sin la letra; si no hay ninguna,
+    recién ahí el código tal cual.
     """
+    plano = "".join(ch for ch in str(codigo or "").upper() if ch.isalnum())
+    if re.fullmatch(r"\d+[IE]", plano):
+        sin_letra = buscar_cubierta_flexible(cx, plano[:-1])
+        if sin_letra:
+            return sin_letra
+
     exacta = buscar_cubierta(cx, codigo)
     if exacta:
         return exacta
@@ -1013,6 +1024,9 @@ def _abrir_montaje(cx, unidad_id, posicion_id, cubierta_id, km=None, nota=None):
         insert into montajes (unidad_id, posicion_id, cubierta_id, km_unidad_montaje, nota)
         values (%s,%s,%s,null,%s)""", (unidad_id, posicion_id, cubierta_id, nota))
     cx.execute("update cubiertas set estado = 'montada' where id = %s", (cubierta_id,))
+    # Una vez puesta ya rodó: si vuelve al depósito, vuelve usada.
+    if hay_columna(cx, "cubiertas", "condicion"):
+        cx.execute("update cubiertas set condicion = 'usada' where id = %s", (cubierta_id,))
     _cargar_costo_cubierta(cx, cubierta_id, unidad_id, posicion_id, km)
 
 
