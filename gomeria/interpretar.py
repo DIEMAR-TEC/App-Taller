@@ -64,12 +64,19 @@ HERRAMIENTA = {
                             "description": "Número de fuego de la cubierta, tal cual lo "
                                            "escribió el gomero (ej: 079, 327). Sin la "
                                            "marca. Va SIEMPRE que el texto lo nombre, "
-                                           "tanto en la que entra como en la que sale."
+                                           "tanto en la que entra como en la que sale. "
+                                           "Null en una que sale sin número: el sistema "
+                                           "la da de alta en stock sin número de fuego."
                         },
                         "marca": {
                             "type": ["string", "null"],
                             "description": "Marca de esa cubierta si el texto la dice "
                                            "(Michelin, Fate, Bridgestone...)."
+                        },
+                        "medida": {
+                            "type": ["string", "null"],
+                            "description": "Medida de esa cubierta si el texto la dice "
+                                           "(275/80, 295/80, 1000x20)."
                         },
                         "remanente_mm": {
                             "type": ["number", "null"],
@@ -78,7 +85,7 @@ HERRAMIENTA = {
                         "nota": {"type": ["string", "null"]}
                     },
                     "required": ["tipo", "posicion", "posicion_destino",
-                                 "cubierta", "marca", "remanente_mm", "nota"]
+                                 "cubierta", "marca", "medida", "remanente_mm", "nota"]
                 }
             },
             "pregunta": {
@@ -184,7 +191,8 @@ REGLAS
    afuera, y en ese eje y lado hay dos posiciones duales, el trabajo es
    sobre las dos: emitilas en orden exterior y después interior (3IE, 3II).
 5. Poné el número de fuego en 'cubierta' siempre que el texto lo diga, en la
-   que entra y también en la que sale, y la marca en 'marca'.
+   que entra y también en la que sale; la marca en 'marca' y la medida en
+   'medida' (275/80, 1000x20).
 6. Si el número de una cubierta que sale figura en el mapa de arriba, la
    posición que toca es esa, no la que sugiera el orden del texto.
 7. El mapa puede estar incompleto: todavía se están cargando las cubiertas
@@ -192,11 +200,19 @@ REGLAS
    significa que el gomero se haya equivocado. Si él dice que de ahí salió
    una cubierta, registrala igual con su número de fuego; el sistema la da
    de alta y la deja donde corresponde. No preguntes por eso.
+7b. Las cubiertas que SALEN muchas veces no tienen número de fuego: el
+   gomero escribe "salen 2 Fate 1000x20 usadas" sin números. Eso es normal
+   y no es un dato faltante. Emití una acción por cada cubierta que sale,
+   con su posición, 'cubierta' en null, la marca y la medida que diga el
+   texto, y "nueva", "usada" o "recapada" en la nota. El sistema las da de
+   alta en stock sin número de fuego. Nunca preguntes por el número de una
+   cubierta que sale. Las que ENTRAN sí necesitan número.
 8. Cuando entran y salen cubiertas en el mismo lugar, emparejalas en el
    orden en que están escritas: la primera que sale deja libre la posición
    donde va la primera que entra. Y poné SIEMPRE primero las acciones de
    las que salen y después las de las que entran.
-9. La cantidad que entra tiene que coincidir con la cantidad que sale. Si no
+9. La cantidad que entra tiene que coincidir con la cantidad que sale (las
+   que salen sin número también cuentan: "salen 4" son cuatro). Si no
    coincide, o si hay más cubiertas nombradas que posiciones en ese lugar,
    no inventes: preguntá.
 10. Dejá km_unidad siempre en null. Los kilómetros no los carga el gomero:
@@ -268,9 +284,26 @@ def aplicar(cx, unidad, propuesta, parte_id=None, usuario=None, base=None):
             return c, False
         codigo = str(a["cubierta"]).strip().upper()
         base.alta_cubierta(cx, codigo, marca=(a.get("marca") or None),
-                           usuario=usuario,
+                           medida=(a.get("medida") or None), usuario=usuario,
                            nota="Alta automática al cargar un parte.")
         return base.buscar_cubierta(cx, codigo), True
+
+    def sin_numero(a):
+        """La cubierta que sale sin número de fuego: entra al stock con un
+        código provisorio (SN-PATENTE-POSICIÓN-AAMMDD) y queda en la lista
+        de las que esperan su número, como las de factura."""
+        import datetime
+        raiz = "SN-{}-{}-{:%y%m%d}".format(
+            str(unidad["patente"]).replace(" ", "").upper(),
+            str(a["posicion"]).upper(), datetime.date.today())
+        codigo, n = raiz, 1
+        while base.buscar_cubierta(cx, codigo):
+            n += 1
+            codigo = f"{raiz}-{n}"
+        base.alta_cubierta(cx, codigo, marca=(a.get("marca") or None),
+                           medida=(a.get("medida") or None), codigo_provisorio=True,
+                           usuario=usuario, nota="Alta sin número de fuego al cargar un parte.")
+        return base.buscar_cubierta(cx, codigo)
 
     # Las rotaciones se juntan y se aplican de una sola vez: si se hicieran
     # de a una, un cruce chocaría contra el índice de posición ocupada.
@@ -327,18 +360,17 @@ def aplicar(cx, unidad, propuesta, parte_id=None, usuario=None, base=None):
                 # así que el sistema ve la posición vacía aunque el gomero haya
                 # sacado una cubierta de ahí. Se asienta igual: lo que importa
                 # es dónde queda la cubierta.
-                if not a.get("cubierta"):
-                    raise ValueError(
-                        f"En {a['posicion']} el sistema no tiene ninguna cubierta "
-                        f"cargada. Indicar el número de fuego de la que sacaste "
-                        f"para poder registrarla.")
-                c, nueva = cubierta_de(a)
+                if a.get("cubierta"):
+                    c, nueva = cubierta_de(a)
+                else:
+                    c, nueva = sin_numero(a), True
                 base.sacar_de_servicio(cx, c["id"], destino=destino,
                                        unidad_id=unidad["id"], posicion_id=pos_id,
                                        km=km, grupo=grupo, parte_id=parte_id,
                                        usuario=usuario, nota=a.get("nota"))
                 hecho.append(f"Sale {c['codigo']} de {a['posicion']} a {donde}"
-                             + (" (alta nueva)" if nueva else ""))
+                             + (" (sin número de fuego)" if not a.get("cubierta")
+                                else " (alta nueva)" if nueva else ""))
 
         elif tipo == "medicion":
             fila = cx.execute("""
