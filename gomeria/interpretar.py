@@ -143,13 +143,18 @@ CÓMO HABLA EL GOMERO
 - "girar", "rotar", "cruzar", "cambiar de lugar" = rotacion
 - "puse", "monté", "calcé", "entra", "entran" = montaje
 - "saqué", "bajé", "sale", "salen" = desmontaje
-- "la mandé a recapar", "sale para recapar" = recapado
+- "para rodar", "usada", "a stock" = desmontaje: vuelve al depósito usada
+- "la mandé a recapar", "sale para recapar", "a recapar" = recapado
 - "la mandé a arreglar", "sale para reparar" = reparacion
-- "la tiré", "no va más", "se reventó", "sale de baja" = baja
+- "la tiré", "no va más", "se reventó", "soplada", "para descarte",
+  "descarte", "sale de baja" = baja
 - "le medí", "tiene X milímetros" = medicion
 - "3 eje", "tercer eje", "eje 3" = el eje 3 del mapa
 - "recapada", "nueva", "usada" describen a la cubierta, no son un movimiento:
   eso va en la nota, no cambia el tipo.
+- Una cubierta que SALE nunca sale nueva: sale usada (a stock), a recapar,
+  a reparar o de baja. Si el texto dice "nueva" junto a las que salen, es
+  un error de redacción: no lo pongas en la nota de las que salen.
 
 CÓMO VIENE ESCRITO EL PARTE
 Casi siempre llega con la patente en la primera línea y el trabajo abajo:
@@ -170,8 +175,9 @@ Eso se lee así:
 - "entran" son las que se montan, "salen" las que se sacan. Las que salen
   liberan justamente las posiciones donde entran las otras.
 - Lo que va detrás de "para" es a dónde se van las que salen: "para recapar"
-  = recapado, "para arreglar" = reparacion, "para tirar" = baja. Si no dice
-  nada, es desmontaje común (van a stock).
+  = recapado, "para arreglar" = reparacion, "para tirar", "para descarte" o
+  "soplada" = baja, "para rodar" = desmontaje (vuelve a stock usada). Si no
+  dice nada, es desmontaje común (vuelve a stock usada).
 
 CÓMO ESCRIBÍS
 El gomero escribe como habla; el sistema no. El resumen y la pregunta salen

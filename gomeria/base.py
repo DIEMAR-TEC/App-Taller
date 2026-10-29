@@ -1095,6 +1095,7 @@ def montar(cx, unidad_id, posicion_id, cubierta_id, km=None, grupo=None, **kw):
     anterior = _cerrar_montaje(cx, unidad_id, posicion_id, km)
     if anterior:
         cx.execute("update cubiertas set estado = 'stock' where id = %s", (anterior["cubierta_id"],))
+        _sale_usada(cx, anterior["cubierta_id"], "stock")
         _log(cx, grupo, "desmontaje", unidad_id=unidad_id, cubierta_id=anterior["cubierta_id"],
              origen_id=posicion_id, km=km, **kw)
     _abrir_montaje(cx, unidad_id, posicion_id, cubierta_id, km, kw.get("nota"))
@@ -1147,6 +1148,14 @@ def donde_esta(cx, cubierta_id):
         (cubierta_id,)).fetchone()
 
 
+def _sale_usada(cx, cubierta_id, destino):
+    """La goma que sale de una unidad nunca vuelve nueva: al depósito
+    vuelve usada. La que va a recapar la acomoda la base (a recapar) y la
+    de baja no importa."""
+    if destino == "stock" and hay_columna(cx, "cubiertas", "condicion"):
+        cx.execute("update cubiertas set condicion = 'usada' where id = %s", (cubierta_id,))
+
+
 def sacar_de_servicio(cx, cubierta_id, destino="stock", unidad_id=None,
                       posicion_id=None, km=None, grupo=None, **kw):
     """Asienta la salida de una cubierta que el sistema no tenía montada.
@@ -1157,6 +1166,7 @@ def sacar_de_servicio(cx, cubierta_id, destino="stock", unidad_id=None,
     """
     grupo = grupo or uuid.uuid4()
     cx.execute("update cubiertas set estado = %s where id = %s", (destino, cubierta_id))
+    _sale_usada(cx, cubierta_id, destino)
     if destino == "baja":
         cx.execute("""update cubiertas set fecha_baja = current_date, motivo_baja = %s
                       where id = %s""", (kw.get("nota"), cubierta_id))
@@ -1174,6 +1184,7 @@ def desmontar(cx, unidad_id, posicion_id, km=None, destino="stock", grupo=None, 
     if not fila:
         raise ValueError("Esa posición ya estaba vacía.")
     cx.execute("update cubiertas set estado = %s where id = %s", (destino, fila["cubierta_id"]))
+    _sale_usada(cx, fila["cubierta_id"], destino)
     if destino == "baja":
         cx.execute("""update cubiertas set fecha_baja = current_date, motivo_baja = %s
                       where id = %s""", (kw.get("nota"), fila["cubierta_id"]))
