@@ -337,7 +337,7 @@ def listado_movimientos(cx, desde=None, hasta=None, limite=3000):
     donde = (" where " + " and ".join(condiciones)) if condiciones else ""
     valores.append(limite)
     return cx.execute(f"""
-        select mv.id, mv.fecha, mv.tipo, u.patente, u.interno, u.sucursal,
+        select mv.id, mv.grupo_id, mv.fecha, mv.tipo, u.patente, u.interno, u.sucursal,
                c.codigo as cubierta, c.marca, c.medida,
                po.codigo as desde_posicion, pd.codigo as hasta_posicion,
                mv.km_unidad, mv.remanente_mm, mv.usuario, mv.nota,

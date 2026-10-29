@@ -55,6 +55,15 @@ table.datos tbody tr[data-id]{cursor:pointer}
 table.datos tbody tr[data-id]:hover{background:var(--p2)}
 table.datos .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 table.datos .fuerte{font-weight:800;color:var(--t)}
+.modal.alta{width:min(860px,100%)}
+.alta-grupo{border:1px solid var(--l2);border-radius:12px;padding:4px 14px 14px;margin:14px 0}
+.alta-grupo .alta-cab{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.alta-grupo .alta-cab b{font-size:11px;color:var(--m);letter-spacing:1px;text-transform:uppercase}
+.alta-grupo textarea{min-height:44px;resize:vertical}
+.alta-codigos{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.alta-codigos span{border-radius:99px;background:var(--p3);padding:3px 9px;font-size:11px;font-weight:800}
+.alta-codigos span.mal{color:var(--bad);border:1px solid var(--bad)}
+.alta-pie{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
 table.datos .flojo{color:var(--m)}
 /* La barra de dibujo: lo gastado en gris, lo que queda en color, y la
    marca del mínimo. Se entiende de un vistazo mejor que dos números. */
@@ -103,6 +112,10 @@ details.plegable summary h3::before{content:'▸ ';color:var(--o)}
 details.plegable[open] summary h3::before{content:'▾ '}
 details.plegable[open] summary{margin-bottom:10px}
 .pestanas{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.movlinea{padding:2px 0}.movlinea .status{display:inline-block;min-width:76px;text-align:center;margin-right:4px}
+.movparte{margin-top:4px;font-size:12px;color:var(--m)}.movparte summary{cursor:pointer}
+.movtabla td{vertical-align:top}
+.metric-filtro{text-align:left;color:var(--t);font:inherit;cursor:pointer}.metric-filtro.on{border-color:var(--o);box-shadow:0 0 0 1px var(--o)}
 .pestanas button{border:1px solid var(--l2);background:var(--p2);color:var(--m);
   border-radius:99px;padding:6px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .pestanas button.on{color:var(--t);border-color:var(--o)}
@@ -179,13 +192,13 @@ main{max-width:1800px}.fleet-picker{margin-bottom:14px}.fleet-picker label{displ
 </style>
 <script src="/tema.js"></script></head><body>
 <header class="top"><img src="/logo.png" alt="Titán Flota" onerror="this.style.display='none'"><a class="back" href="/">‹ Inicio</a><span class="brand">Gomería</span><span class="who" id="who"></span></header>
-<nav class="tabs"><button class="tab on" data-tab="fleet">Flota y mapas</button><button class="tab" data-tab="stock">Stock de cubiertas</button><button class="tab" data-tab="retread">Recapado</button><button class="tab" data-tab="wear">Desgaste y costos</button><button class="tab" data-tab="changes">Cambios por eje</button><button class="tab" data-tab="moves">Movimientos</button><button class="tab" data-tab="register">Registrar trabajo</button></nav>
+<nav class="tabs"><button class="tab on" data-tab="fleet">Flota y mapas</button><button class="tab" data-tab="stock">Stock de cubiertas</button><button class="tab" data-tab="retread">Recapado</button><button class="tab" data-tab="wear">Desgaste y costos</button><button class="tab" data-tab="changes">Alertas por eje</button><button class="tab" data-tab="moves">Movimientos</button><button class="tab" data-tab="register">Registrar trabajo</button></nav>
 <main><section class="panel on" id="fleet"><div class="card fleet-picker" id="unitPicker"><label for="unitSearch">Elegir unidad <span class="sub" id="unitCount">Cargando…</span></label><div class="picker-box"><input class="search" id="unitSearch" role="combobox" aria-expanded="false" aria-controls="unitList" aria-autocomplete="list" aria-haspopup="listbox" autocomplete="off" placeholder="Buscar patente, interno o sucursal"><button class="picker-abrir" id="unitToggle" type="button" tabindex="-1" aria-label="Ver todas las unidades">▾</button><div class="units" id="unitList" role="listbox" aria-label="Unidades" hidden></div></div></div><p id="benchStatus" role="status"></p><div class="grid"><aside class="card stock-shelf"><h2>Stock de cubiertas</h2><p class="workbench-help">Seleccionar una cubierta o arrastrarla a un casillero vacío. Se muestran hasta 200 resultados; usar el buscador para encontrar otras.</p><input id="shelfSearch" placeholder="Código, marca o medida" aria-label="Buscar cubierta en stock"><div class="drop-stock" id="returnStock">Arrastrar a esta zona la cubierta que se retira.<br><small>Se pedirá destino y motivo.</small></div><div id="shelfList" class="shelf-list"></div></aside><div id="unitDetail"><div class="card loading"><span class="pulse"></span>Cargando mapas…</div></div><aside class="card tire-inspector" id="tireInspector"><h3>Neumático seleccionado</h3><p class="workbench-help">Seleccionar una cubierta del stock o una posición del vehículo.</p></aside></div></section>
 <section class="panel" id="stock"><div class="metrics" id="metrics"></div><div class="card"><div class="stockbar"><div class="filters"><input id="stockSearch" placeholder="Buscar código, marca o medida"><select id="stockState"><option value="">Todos los estados</option><option value="nueva">Nueva</option><option value="usada">Usada</option><option value="a_recapar">A recapar</option><option value="recapada">Recapada</option><option value="recapado">En recapador</option><option value="montada">Montada</option><option value="reparacion">Reparación</option><option value="baja">Baja</option></select><select id="stockDeposito"><option value="">Todas las ubicaciones</option></select><select id="stockFuego"><option value="">Con y sin número de fuego</option><option value="1">Solo sin número de fuego</option></select><select id="stockTipo"><option value="">Todos los tipos</option><option value="direccion">Dirección</option><option value="traccion">Tracción</option><option value="mixta">Mixta</option><option value="-">Sin tipo</option></select></div><button class="btn alt" id="tireFactura">Alta por factura</button><button class="btn" id="newTire">+ Alta de cubierta</button></div><div class="stockbar" id="tipoMasivo" hidden><span class="help" id="tipoMasivoTxt"></span><div class="actions"><select id="tipoMasivoSel"><option value="direccion">Dirección</option><option value="traccion">Tracción</option><option value="mixta">Mixta</option></select><button class="btn alt" id="tipoMasivoOk">Asignar tipo</button></div></div><div class="tablewrap"><table><thead><tr><th>Código</th><th>Estado</th><th>Marca / modelo</th><th>Medida</th><th>Tipo</th><th>Remanente</th><th>Ubicación</th></tr></thead><tbody id="stockRows"></tbody></table></div></div></section>
 <section class="panel" id="retread"><div id="retreadBody"><div class="card loading"><span class="pulse"></span>Cargando el recapado…</div></div></section>
 <section class="panel" id="wear"><div id="wearBody"><div class="card loading"><span class="pulse"></span>Calculando desgaste…</div></div></section>
 <section class="panel" id="changes"><div id="neuBody"><div class="card loading"><span class="pulse"></span>Calculando cambios…</div></div></section>
-<section class="panel" id="moves"><div class="card"><div class="stockbar"><div class="filters movfiltros"><input id="movBuscar" type="search" placeholder="Buscar patente, cubierta o nota"><input id="movDesde" type="date" title="Desde"><input id="movHasta" type="date" title="Hasta"><select id="movTipo"><option value="">Todos los tipos</option></select><select id="movUsuario"><option value="">Todos los usuarios</option></select></div><button class="btn alt" id="movExportar">Exportar CSV</button></div><p class="help" id="movCuenta"></p><div class="tablewrap"><table class="datos"><thead><tr><th>Fecha</th><th>Unidad</th><th>Tipo</th><th>Cubierta</th><th>Posición</th><th class="num">Km</th><th class="num">Remanente</th><th>Usuario</th><th>Nota</th></tr></thead><tbody id="movRows"><tr><td colspan="9" class="emptymsg">Cargando…</td></tr></tbody></table></div></div></section>
+<section class="panel" id="moves"><div class="metrics" id="movMetricas"></div><div class="card"><div class="pestanas" id="movPeriodo"><button data-dias="0">Hoy</button><button data-dias="7">7 días</button><button data-dias="30" class="on">30 días</button><button data-dias="90">90 días</button><button data-dias="365">Un año</button><input id="movDesde" type="date" title="Desde" style="max-width:160px;padding:5px 9px"><input id="movHasta" type="date" title="Hasta" style="max-width:160px;padding:5px 9px"></div><div class="stockbar"><div class="filters"><input id="movBuscar" type="search" placeholder="Buscar patente, cubierta o nota"><select id="movTipo"><option value="">Todos los trabajos</option></select><select id="movUsuario"><option value="">Todos los usuarios</option></select></div><button class="btn alt" id="movExportar">Exportar CSV</button></div><p class="help" id="movCuenta"></p><div class="tablewrap"><table class="datos movtabla"><thead><tr><th>Fecha</th><th>Unidad</th><th>Qué se hizo</th><th class="num">Km</th><th>Usuario</th></tr></thead><tbody id="movRows"><tr><td colspan="5" class="emptymsg">Cargando…</td></tr></tbody></table></div></div></section>
 <section class="panel" id="register"><div class="card register"><h1>Registrar trabajo</h1><p class="sub">Revisar la propuesta antes de guardar el movimiento.</p><label for="workSearch">Unidad <span class="help">(opcional si figura en el texto)</span></label><div class="picker-box"><input class="search" id="workSearch" role="combobox" aria-expanded="false" aria-controls="workList" aria-autocomplete="list" aria-haspopup="listbox" autocomplete="off" placeholder="Buscar patente, interno o sucursal"><button class="picker-abrir" id="workToggle" type="button" tabindex="-1" aria-label="Ver todas las unidades">&#9662;</button><div class="units" id="workList" role="listbox" aria-label="Unidades" hidden></div><input type="hidden" id="workUnit"></div><label>Trabajo realizado</label><textarea id="workText" placeholder="Patente: AD 900 UK&#10;3 eje lado izquierdo entran 2 Michelin 079 y 327 recapadas.. salen 2 Fate 380 y 381 para recapar.."></textarea><p class="help">Se escribe como el parte: la patente arriba y debajo qué entra y qué sale, con el número de fuego. Los kilómetros se toman automáticamente de Hawk según la fecha del movimiento.</p><button class="btn" id="interpret">Interpretar movimiento</button><div id="workResult"></div></div></section></main>
 <div class="modalbg" id="tireModal"><div class="modal"><div class="modaltop"><h2 id="tireTitle">Cubierta</h2><button class="close" data-close="tireModal">×</button></div><div id="tireBody"></div></div></div>
 <div class="modalbg" id="measureModal"><div class="modal"><div class="modaltop"><h2 id="measureTitle">Medir dibujo</h2><button class="close" data-close="measureModal">×</button></div><p class="sub">Milímetros remanentes. Determinan la alerta y el costo por milímetro.</p><div class="formgrid"><div><label>Remanente (mm)</label><input id="mMm" type="number" min="0" max="40" step=".5"></div></div><div id="measureError"></div><button class="btn" id="saveMeasure">Guardar medición</button></div></div>
@@ -194,7 +207,7 @@ main{max-width:1800px}.fleet-picker{margin-bottom:14px}.fleet-picker label{displ
 <div class="modalbg" id="facModal"><div class="modal"><div class="modaltop"><h2>Alta de cubiertas por factura</h2><button class="close" data-close="facModal">×</button></div><p class="sub">Se lee la factura y se proponen los renglones. El número de fuego no está en la factura —lo graba el gomero— así que entran con un código provisorio y se completa desde el stock.</p><div class="actions"><input id="facArch" type="file" accept="image/*,application/pdf" multiple><button class="btn" id="facLeer">Leer la factura</button></div><div id="facSalida"></div></div></div>
 <div class="modalbg" id="recModal"><div class="modal"><div class="modaltop"><h2 id="recModalTitle">Recibir del recapador</h2><button class="close" data-close="recModal">×</button></div><div id="recModalBody"></div><button class="btn" id="recGuardar" style="margin-top:12px">Registrar la vuelta</button></div></div>
 <datalist id="catMarcas"></datalist><datalist id="catMedidas"></datalist>
-<div class="modalbg" id="newModal"><div class="modal"><div class="modaltop"><h2>Alta de cubierta</h2><button class="close" data-close="newModal">×</button></div><div class="formgrid"><div><label>Código / número de fuego</label><input id="nCode"></div><div><label>Medida</label><input id="nSize" list="catMedidas" placeholder="295/80R22.5"></div><div><label>Marca</label><input id="nBrand" list="catMarcas"></div><div><label>Modelo</label><input id="nModel"></div><div><label>Remanente inicial (mm)</label><input id="nMm" type="number" min="0" step=".1"></div><div><label>Costo de compra</label><input id="nCost" type="number" min="0" step=".01"></div><div><label>Estado</label><select id="nCond"><option value="nueva">Nueva</option><option value="usada">Usada</option><option value="recapada">Recapada</option><option value="a_recapar">A recapar</option></select></div><div><label>Tipo</label><select id="nTipo"><option value="">Sin definir</option><option value="direccion">Dirección</option><option value="traccion">Tracción</option><option value="mixta">Mixta</option></select></div><div class="wide"><label>Observaciones</label><input id="nObs"></div></div><div id="newError"></div><button class="btn" id="saveTire">Guardar cubierta</button></div></div>
+<div class="modalbg" id="newModal"><div class="modal alta"><div class="modaltop"><h2>Alta de cubiertas</h2><button class="close" data-close="newModal">×</button></div><div id="altaGrupos"></div><button class="btn alt" id="altaOtro" type="button">+ Otro tipo de cubierta</button><div id="newError"></div><div class="alta-pie"><span class="help" id="altaTotal"></span><button class="btn" id="saveTire">Guardar</button></div></div></div>
 <script src="/vendor/three.min.js"></script>
 <script src="/vendor/OrbitControls.js"></script>
 <script src="/vendor/OBJLoader.js"></script>
@@ -641,7 +654,57 @@ async function guardarFac(){
   }catch(e){ $('#facError').innerHTML=`<p class="error">${esc(e.message)}</p>`; }
   finally{ b.disabled=false; }
 }
-$('#newTire').onclick=()=>modal('newModal');$('#saveTire').onclick=async()=>{let b=$('#saveTire');b.disabled=true;$('#newError').innerHTML='';try{await api('/api/cubiertas',{op:'alta',codigo:$('#nCode').value,medida:$('#nSize').value,marca:$('#nBrand').value,modelo:$('#nModel').value,remanente_mm:$('#nMm').value,costo_compra:$('#nCost').value,tipo:$('#nTipo').value,condicion:$('#nCond').value,observaciones:$('#nObs').value});$('#nCond').value='nueva';['nCode','nSize','nBrand','nModel','nMm','nCost','nObs','nTipo'].forEach(x=>$('#'+x).value='');modal('newModal',false);await loadStock()}catch(e){$('#newError').innerHTML=`<p class="error">${esc(e.message)}</p>`}finally{b.disabled=false}};
+/* ALTA DE CUBIERTAS. Cada bloque es un tipo de cubierta: los datos en
+   común y la lista de números de fuego. «321, 322» o uno por renglón;
+   «321-325» es la serie entera. Todo se guarda junto: o entran todas, o
+   ninguna. */
+const ALTA_CAMPOS=['medida','marca','modelo','remanente_mm','costo_compra','condicion','tipo','observaciones'];
+function altaCodigos(txt){
+  const out=[];
+  String(txt||'').toUpperCase().split(/[\s,;]+/).filter(Boolean).forEach(t=>{
+    const r=t.match(/^(\d+)-(\d+)$/);
+    if(r&&+r[2]>=+r[1]&&+r[2]-+r[1]<200){for(let n=+r[1];n<=+r[2];n++)out.push(String(n).padStart(r[1].length,'0'))}
+    else out.push(t);
+  });
+  return out;
+}
+function altaBloque(base){
+  const d=base||{condicion:'nueva'},g=document.createElement('div');g.className='alta-grupo';
+  g.innerHTML=`<div class="alta-cab"><b></b><button class="btn alt btnchico" type="button" data-quitar>Quitar</button></div>
+  <label>Números de fuego</label><textarea data-k="codigos" placeholder="321, 322, 323 o 321-330"></textarea><div class="alta-codigos"></div>
+  <div class="formgrid"><div><label>Medida</label><input data-k="medida" list="catMedidas" placeholder="295/80R22.5"></div><div><label>Marca</label><input data-k="marca" list="catMarcas"></div><div><label>Modelo</label><input data-k="modelo"></div><div><label>Remanente inicial (mm)</label><input data-k="remanente_mm" type="number" min="0" step=".1"></div><div><label>Costo de compra c/u</label><input data-k="costo_compra" type="number" min="0" step=".01"></div><div><label>Estado</label><select data-k="condicion"><option value="nueva">Nueva</option><option value="usada">Usada</option><option value="recapada">Recapada</option><option value="a_recapar">A recapar</option></select></div><div><label>Tipo</label><select data-k="tipo"><option value="">Sin definir</option><option value="direccion">Dirección</option><option value="traccion">Tracción</option><option value="mixta">Mixta</option></select></div><div><label>Observaciones</label><input data-k="observaciones"></div></div>`;
+  ALTA_CAMPOS.forEach(k=>{if(d[k]!=null)g.querySelector(`[data-k="${k}"]`).value=d[k]});
+  g.querySelector('[data-quitar]').onclick=()=>{g.remove();altaResumen()};
+  g.addEventListener('input',altaResumen);
+  $('#altaGrupos').appendChild(g);altaResumen();
+  g.querySelector('textarea').focus();
+}
+function altaLeer(){
+  return $$('#altaGrupos .alta-grupo').map(g=>{
+    const d={codigos:altaCodigos(g.querySelector('[data-k="codigos"]').value)};
+    ALTA_CAMPOS.forEach(k=>d[k]=g.querySelector(`[data-k="${k}"]`).value.trim());
+    return d;
+  });
+}
+function altaResumen(){
+  const gs=altaLeer(),todos=gs.flatMap(g=>g.codigos),cuenta={};
+  todos.forEach(c=>cuenta[c]=(cuenta[c]||0)+1);
+  const enStock=new Set((D.tires||[]).map(t=>String(t.codigo).toUpperCase()));
+  $$('#altaGrupos .alta-grupo').forEach((el,i)=>{
+    el.querySelector('.alta-cab b').textContent=`Tipo ${i+1}`+(gs[i].codigos.length?` · ${gs[i].codigos.length} cubierta${gs[i].codigos.length===1?'':'s'}`:'');
+    el.querySelector('[data-quitar]').hidden=gs.length<2;
+    el.querySelector('.alta-codigos').innerHTML=gs[i].codigos.map(c=>{
+      const mal=cuenta[c]>1?'repetido':enStock.has(c)?'ya existe':'';
+      return `<span class="${mal?'mal':''}" title="${mal}">${esc(c)}${mal?' · '+mal:''}</span>`}).join('');
+  });
+  const n=todos.length;
+  $('#altaTotal').textContent=n?`${n} cubierta${n===1?'':'s'} en ${gs.length} tipo${gs.length===1?'':'s'}`:'Sin números de fuego cargados';
+  $('#saveTire').textContent=n>1?`Dar de alta ${n} cubiertas`:'Guardar cubierta';
+  $('#saveTire').disabled=!n;
+}
+$('#newTire').onclick=()=>{$('#altaGrupos').innerHTML='';$('#newError').innerHTML='';altaBloque();modal('newModal')};
+$('#altaOtro').onclick=()=>{const gs=altaLeer(),u=gs[gs.length-1]||{};altaBloque({...u,codigos:''})};
+$('#saveTire').onclick=async()=>{let b=$('#saveTire');b.disabled=true;$('#newError').innerHTML='';try{await api('/api/cubiertas',{op:'alta_lote',grupos:altaLeer()});modal('newModal',false);await loadStock()}catch(e){$('#newError').innerHTML=`<p class="error">${esc(e.message)}</p>`;b.disabled=false}};
 async function interpret(){let p=$('#workUnit').value,t=$('#workText').value.trim(),out=$('#workResult');
 if(!t)return out.innerHTML='<div class="result error">Escribir el trabajo realizado.</div>';
 let b=$('#interpret');b.disabled=true;out.innerHTML='<div class="result"><span class="pulse"></span>Interpretando…</div>';try{let d=await api('/api/interpretar',{patente:p,texto:t}),x=d.propuesta;D.parte=d.parte_id;if(!x.acciones?.length)out.innerHTML=`<div class="result error">${esc(x.pregunta||'No quedó claro el movimiento.')}</div>`;else{out.innerHTML=`<div class="result proposal"><b>${esc(x.resumen||'Movimiento interpretado')}</b><ul>${x.acciones.map(a=>`<li>${esc(a.tipo)} · ${esc(a.posicion||'')}${a.posicion_destino?' → '+esc(a.posicion_destino):''}${a.cubierta?' · '+esc(a.cubierta):''}</li>`).join('')}</ul><div class="actions"><button class="btn" id="confirm">Confirmar</button><button class="btn alt" id="discard">Descartar</button></div></div>`;$('#confirm').onclick=confirm;$('#discard').onclick=discard}}catch(e){out.innerHTML=`<div class="result error">${esc(e.message)}</div>`}finally{b.disabled=false}}async function confirm(){try{let d=await api('/api/confirmar',{parte_id:D.parte});$('#workResult').innerHTML=`<div class="result success">Guardado.<br>${d.hecho.map(esc).join('<br>')}</div>`;$('#workText').value='';await dashboard();if(D.selected)await selectUnit(D.selected);if(D.tires.length)await loadStock()}catch(e){$('#workResult').innerHTML=`<div class="result error">${esc(e.message)}</div>`}}async function discard(){await api('/api/descartar',{parte_id:D.parte}).catch(()=>{});$('#workResult').innerHTML=''}$('#interpret').onclick=interpret;
@@ -1096,6 +1159,8 @@ function listaVidas(v){
    ===================================================================== */
 const TIPOS_EJE={direccion:'Dirección',traccion:'Tracción',portante:'Portante',arrastre:'Arrastre'};
 const ESTADOS_NEU={vencido:'Pasado',proximo:'Próximo',sin_dato:'Sin dato',ok:'Bien',sin_regla:'Sin regla'};
+const ESTADOS_NEU_LARGO={vencido:'Pasados de cambio',proximo:'Próximos a cambiar',ok:'En regla',sin_dato:'Sin último cambio',sin_regla:'Sin regla'};
+const ORDEN_NEU={vencido:0,proximo:1,sin_dato:2,sin_regla:3,ok:4};
 const AGRUPAR={patente:'Patente',marca:'Marca',modelo:'Marca y modelo',tipo_eje:'Tipo de eje',mapa_eje:'Mapa y eje'};
 D.neu=null;D.neuFiltro={q:'',estado:'',tipo:''};D.neuAgrupar='marca';D.neuTipoMetrica='';
 const fdia=v=>v?new Date(String(v).slice(0,10)+'T00:00').toLocaleDateString('es-AR'):'—';
@@ -1122,9 +1187,13 @@ function filtrarEjes(){
     (!q||[x.patente,fmtPat(x.patente),x.interno,x.tractor,x.sucursal,x.mapa].join(' ').toLowerCase().includes(q)));
 }
 function tablaEjes(){
-  const a=filtrarEjes();
+  const a=filtrarEjes().slice().sort((x,y)=>(ORDEN_NEU[x.estado]??9)-(ORDEN_NEU[y.estado]??9)||(x.km_restantes??1e12)-(y.km_restantes??1e12));
   if(!a.length)return '<div class="emptymsg">No hay ejes con ese filtro.</div>';
-  return `<div class="tablewrap"><table class="datos"><thead><tr><th>Unidad</th><th>Eje</th><th>Se cuenta desde</th><th class="num">Km</th><th class="num">Días</th><th>Se cambia cada</th><th>Falta</th><th>Estado</th><th></th></tr></thead><tbody>${a.map(x=>`<tr><td class="fuerte">${esc(fmtPat(x.patente))}${x.interno?' <span class="flojo">int. '+esc(x.interno)+'</span>':''}${x.tractor?'<div class="flojo" style="font-weight:400">con '+esc(fmtPat(x.tractor))+'</div>':''}</td><td>E${esc(x.eje)} · ${esc(tipoEje(x.tipo_eje))}<div class="flojo">${esc(x.mapa)}</div></td><td>${x.desde?fdia(x.desde)+'<div class="flojo">'+(String(x.origen||'').includes('cambio')?'cambio registrado':'cubiertas montadas')+(x.con_dato<x.posiciones?` · ${x.con_dato} de ${x.posiciones}`:'')+'</div>':'<span class="flojo">—</span>'}</td><td class="num">${x.km_parcial&&!x.km?'<span class="flojo" title="Ni la unidad ni un tractor enganchado reportan km desde esa fecha.">sin satelital</span>':x.km!=null?nfmt(x.km)+(x.km_parcial?' '+PARCIAL:''):'—'}</td><td class="num">${x.dias!=null?nfmt(x.dias):'—'}</td><td>${reglaTxt(x)}</td><td>${faltaNeu(x)}</td><td><span class="alerta ${esc(x.estado)}">${esc(ESTADOS_NEU[x.estado]||x.estado)}</span></td><td><button class="btn alt btnchico" data-cambio="${x.unidad_id}" data-eje="${x.eje}">Cambio</button></td></tr>`).join('')}</tbody></table></div>`;
+  const recorrido=x=>{const p=[];
+    if(x.km_parcial&&!x.km)p.push('<span class="flojo" title="Sin satelital desde esa fecha">sin km</span>');
+    else if(x.km!=null)p.push(nfmt(x.km)+' km'+(x.km_parcial?' '+PARCIAL:''));
+    if(x.dias!=null)p.push(nfmt(x.dias)+' días');return p.join('<div class="flojo">')+(p.length>1?'</div>':'')||'—'};
+  return `<div class="tablewrap"><table class="datos"><thead><tr><th>Estado</th><th>Unidad</th><th>Eje</th><th>Último cambio</th><th class="num">Recorrido</th><th>Cambio cada</th><th>Falta</th><th></th></tr></thead><tbody>${a.map(x=>`<tr><td><span class="alerta ${esc(x.estado)}">${esc(ESTADOS_NEU[x.estado]||x.estado)}</span></td><td class="fuerte">${esc(fmtPat(x.patente))}${x.interno?' <span class="flojo">int. '+esc(x.interno)+'</span>':''}${x.tractor?'<div class="flojo" style="font-weight:400">con '+esc(fmtPat(x.tractor))+'</div>':''}</td><td>Eje ${esc(x.eje)} · ${esc(tipoEje(x.tipo_eje))}<div class="flojo">${esc(x.mapa)}</div></td><td>${x.desde?fdia(x.desde)+'<div class="flojo">'+(String(x.origen||'').includes('cambio')?'cambio registrado':'según montaje')+(x.con_dato<x.posiciones?` · ${x.con_dato} de ${x.posiciones} cubiertas`:'')+'</div>':'<span class="flojo">—</span>'}</td><td class="num">${recorrido(x)}</td><td>${reglaTxt(x)}</td><td>${faltaNeu(x)}</td><td><button class="btn alt btnchico" data-cambio="${x.unidad_id}" data-eje="${x.eje}">Registrar cambio</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 
 /* Las reglas, un bloque por mapa. El tractor S-D-D viene con 150.000 en
@@ -1162,43 +1231,48 @@ function tablaCambios(gestor){
   return `<div class="tablewrap"><table class="datos"><thead><tr><th>Fecha</th><th>Unidad</th><th>Eje</th><th>Cubiertas</th><th class="num">Odómetro</th><th>Cargó</th>${gestor?'<th></th>':''}</tr></thead><tbody>${c.slice(0,60).map(x=>`<tr><td>${fdia(x.fecha)}</td><td class="fuerte">${esc(fmtPat(x.patente))}</td><td>E${esc(x.eje)}</td><td>${esc([x.marca,x.modelo,x.medida].filter(Boolean).join(' · ')||'—')}${x.nota?'<div class="flojo">'+esc(x.nota)+'</div>':''}</td><td class="num">${x.km_unidad!=null?nfmt(x.km_unidad):'—'}</td><td class="flojo">${esc(x.usuario||'')}</td>${gestor?`<td><button class="btn alt btnchico" data-anular="${x.id}">Anular</button></td>`:''}</tr>`).join('')}</tbody></table></div>`;
 }
 
+/* Cuatro vistas en vez de una sola página larga: lo que hay que cambiar,
+   cuánto rinden las gomas, las reglas de cada mapa y los cambios cargados
+   a mano. */
+const NEU_VISTAS={ejes:'Para cambiar',rinde:'Rendimiento',reglas:'Reglas por eje',cambios:'Cambios registrados'};
+D.neuVista='ejes';
 function renderNeu(){
   const d=D.neu,caja=$('#neuBody');
-  if(!d.instalado){caja.innerHTML=`<div class="card"><h1>Cambios por eje</h1><p class="sub">${esc(d.aviso)}</p><p class="help">Es un archivo que se pega en Supabase → SQL Editor → Run. Después esta pantalla se llena sola.</p></div>`;return}
-  const r=d.resumen,gestor=!!D.user?.puede_administrar,f=D.neuFiltro;
-  caja.innerHTML=`
-  <div id="neuError"></div>
-  <div class="metrics">
-    <div class="metric"><b style="color:var(--bad)">${r.vencido}</b><span>ejes pasados</span></div>
-    <div class="metric"><b style="color:var(--w)">${r.proximo}</b><span>próximos a cambiar</span></div>
-    <div class="metric"><b>${r.sin_dato}</b><span>sin último cambio</span></div>
-    <div class="metric"><b>${r.ok}</b><span>bien</span></div>
-    <div class="metric"><b>${r.sin_regla}</b><span>sin regla</span></div>
-  </div>
-  <div class="card"><div class="stockbar"><div><h1>A qué eje le toca</h1><p class="sub" style="margin-bottom:0">Un eje está como su peor cubierta. Los semis cuentan los km del tractor que los llevaba cada día, según los enganches de Flota → Asociación de equipos.</p></div><button class="btn" id="neuNuevo">+ Registrar cambio</button></div>
-    <div class="filters" style="margin-bottom:12px"><input id="neuQ" placeholder="Buscar patente, interno, tractor o mapa" value="${esc(f.q)}"><select id="neuEstado"><option value="">Todos los estados</option>${Object.entries(ESTADOS_NEU).map(([k,v])=>`<option value="${k}"${f.estado===k?' selected':''}>${v}</option>`).join('')}</select><select id="neuTipo"><option value="">Todos los ejes</option>${Object.entries(TIPOS_EJE).map(([k,v])=>`<option value="${k}"${f.tipo===k?' selected':''}>${v}</option>`).join('')}</select></div>
-    <div id="neuEjes">${tablaEjes()}</div></div>
-  <div class="card section"><h3>Cuánto dura una goma</h3><p class="sub">Promedio de las cubiertas que ya salieron de su eje, en días y en km. Los km de un período que el satelital no cubrió entero quedan afuera del promedio de km.</p>
-    <div class="pestanas" id="neuAgrupar">${Object.entries(AGRUPAR).map(([k,v])=>`<button data-agrupar="${k}" class="${D.neuAgrupar===k?'on':''}">${v}</button>`).join('')}<select id="neuTipoMetrica" style="max-width:170px;padding:5px 9px;font-size:12px"><option value="">Todos los ejes</option>${Object.entries(TIPOS_EJE).map(([k,v])=>`<option value="${k}"${D.neuTipoMetrica===k?' selected':''}>${v}</option>`).join('')}</select></div>
-    <div id="neuDuraciones">${tablaDuraciones()}</div></div>
-  <div class="card section"><h3>Cada cuánto se cambia cada eje</h3><p class="sub">Por mapa de ejes: todas las unidades con el mismo mapa comparten la regla. Puede indicarse en km, en días o ambos; se aplica lo que ocurra primero. Para los semis sin tractor conocido, los días son lo único que avisa.</p>${gestor?'':'<p class="help">Solo un encargado o administrador puede cambiar las reglas.</p>'}${tablaReglas(gestor)}</div>
-  <details class="card section plegable"><summary><h3>Cambios registrados a mano · ${d.cambios.length}</h3></summary>${tablaCambios(gestor)}</details>
-`;
+  if(!d.instalado){caja.innerHTML=`<div class="card"><h1>Alertas por eje</h1><p class="sub">${esc(d.aviso)}</p></div>`;return}
+  const r=d.resumen,gestor=!!D.user?.puede_administrar,f=D.neuFiltro,v=D.neuVista;
+  const tarjeta=(k,color)=>`<button class="metric metric-filtro${f.estado===k?' on':''}" data-estado="${k}"><b${color?` style="color:${color}"`:''}>${r[k]}</b><span>${esc(ESTADOS_NEU_LARGO[k])}</span></button>`;
+  const vistas=`<div class="pestanas neu-vistas">${Object.entries(NEU_VISTAS).map(([k,t])=>`<button data-vista="${k}" class="${v===k?'on':''}">${t}${k==='cambios'?' · '+d.cambios.length:''}</button>`).join('')}</div>`;
+  let cuerpo='';
+  if(v==='ejes')cuerpo=`
+  <div class="metrics">${tarjeta('vencido','var(--bad)')}${tarjeta('proximo','var(--w)')}${tarjeta('ok','var(--ok)')}${tarjeta('sin_dato')}${tarjeta('sin_regla')}</div>
+  <div class="card"><div class="stockbar"><div class="filters"><input id="neuQ" placeholder="Buscar patente, interno o mapa" value="${esc(f.q)}"><select id="neuTipo"><option value="">Todos los ejes</option>${Object.entries(TIPOS_EJE).map(([k,t])=>`<option value="${k}"${f.tipo===k?' selected':''}>${t}</option>`).join('')}</select></div><button class="btn" id="neuNuevo">+ Registrar cambio</button></div>
+    <div id="neuEjes">${tablaEjes()}</div></div>`;
+  else if(v==='rinde')cuerpo=`<div class="card"><h3>Duración promedio por cubierta retirada</h3>
+    <div class="pestanas" id="neuAgrupar">${Object.entries(AGRUPAR).map(([k,t])=>`<button data-agrupar="${k}" class="${D.neuAgrupar===k?'on':''}">${t}</button>`).join('')}<select id="neuTipoMetrica" style="max-width:170px;padding:5px 9px;font-size:12px"><option value="">Todos los ejes</option>${Object.entries(TIPOS_EJE).map(([k,t])=>`<option value="${k}"${D.neuTipoMetrica===k?' selected':''}>${t}</option>`).join('')}</select></div>
+    <div id="neuDuraciones">${tablaDuraciones()}</div></div>`;
+  else if(v==='reglas')cuerpo=`<div class="card"><h3>Cada cuánto se cambia cada eje</h3><p class="help">Una regla por mapa de ejes. Con km y días, vale lo que se cumpla primero.</p>${gestor?'':'<p class="help">Edición reservada a encargados y administradores.</p>'}${tablaReglas(gestor)}</div>`;
+  else cuerpo=`<div class="card"><div class="stockbar"><h3 style="margin:0">Cambios registrados a mano</h3><button class="btn" id="neuNuevo">+ Registrar cambio</button></div>${tablaCambios(gestor)}</div>`;
+  caja.innerHTML=`<div id="neuError"></div>${vistas}${cuerpo}`;
 
-  const pintarEjes=()=>{$('#neuEjes').innerHTML=tablaEjes();engancharCambio()};
-  $('#neuQ').oninput=e=>{f.q=e.target.value;pintarEjes()};
-  $('#neuEstado').onchange=e=>{f.estado=e.target.value;pintarEjes()};
-  $('#neuTipo').onchange=e=>{f.tipo=e.target.value;pintarEjes()};
-  $$('#neuAgrupar [data-agrupar]').forEach(b=>b.onclick=()=>{D.neuAgrupar=b.dataset.agrupar;$$('#neuAgrupar [data-agrupar]').forEach(x=>x.classList.toggle('on',x===b));$('#neuDuraciones').innerHTML=tablaDuraciones()});
-  $('#neuTipoMetrica').onchange=e=>{D.neuTipoMetrica=e.target.value;$('#neuDuraciones').innerHTML=tablaDuraciones()};
-  $('#neuNuevo').onclick=()=>abrirCambio();
-  engancharCambio();
+  $$('#neuBody .neu-vistas [data-vista]').forEach(b=>b.onclick=()=>{D.neuVista=b.dataset.vista;renderNeu()});
+  if($('#neuNuevo'))$('#neuNuevo').onclick=()=>abrirCambio();
+  if(v==='ejes'){
+    const pintarEjes=()=>{$('#neuEjes').innerHTML=tablaEjes();engancharCambio()};
+    $('#neuQ').oninput=e=>{f.q=e.target.value;pintarEjes()};
+    $('#neuTipo').onchange=e=>{f.tipo=e.target.value;pintarEjes()};
+    $$('#neuBody [data-estado]').forEach(b=>b.onclick=()=>{f.estado=f.estado===b.dataset.estado?'':b.dataset.estado;renderNeu()});
+    engancharCambio();
+  }
+  if(v==='rinde'){
+    $$('#neuAgrupar [data-agrupar]').forEach(b=>b.onclick=()=>{D.neuAgrupar=b.dataset.agrupar;$$('#neuAgrupar [data-agrupar]').forEach(x=>x.classList.toggle('on',x===b));$('#neuDuraciones').innerHTML=tablaDuraciones()});
+    $('#neuTipoMetrica').onchange=e=>{D.neuTipoMetrica=e.target.value;$('#neuDuraciones').innerHTML=tablaDuraciones()};
+  }
   if(!gestor)return;
   $$('#neuBody [data-regla]').forEach(b=>b.onclick=()=>{const id=b.dataset.regla,[cfg,eje]=id.split('-');
     neuEscribir({op:'regla_guardar',configuracion_id:cfg,eje,tipo_eje:$('#rt-'+id).value,cada_km:$('#rk-'+id).value,cada_dias:$('#rd-'+id).value,aviso_km:$('#rak-'+id).value,aviso_dias:$('#rad-'+id).value})});
   $$('#neuBody [data-sinregla]').forEach(b=>b.onclick=()=>{const[cfg,eje]=b.dataset.sinregla.split('-');
-    if(confirm('¿Sacar la regla de este eje? Las unidades con este mapa dejan de avisar.'))neuEscribir({op:'regla_borrar',configuracion_id:cfg,eje})});
-  $$('#neuBody [data-anular]').forEach(b=>b.onclick=()=>{const m=prompt('¿Por qué se anula este cambio?');if(m)neuEscribir({op:'cambio_anular',id:b.dataset.anular,motivo:m})});
+    if(confirm('¿Quitar la regla de este eje? Las unidades con este mapa dejan de generar alertas.'))neuEscribir({op:'regla_borrar',configuracion_id:cfg,eje})});
+  $$('#neuBody [data-anular]').forEach(b=>b.onclick=()=>{const m=prompt('Motivo de la anulación');if(m)neuEscribir({op:'cambio_anular',id:b.dataset.anular,motivo:m})});
 }
 function engancharCambio(){$$('#neuEjes [data-cambio]').forEach(b=>b.onclick=()=>abrirCambio(+b.dataset.cambio,+b.dataset.eje))}
 
@@ -1236,40 +1310,70 @@ $('#ncGuardar').onclick=async()=>{
 
 async function dashboard(){let d=await api('/api/tablero');D.units=d.unidades;D.summary=d.resumen_stock;renderUnits();metrics();pintarWork();await loadWear();if(!D.selected&&D.units.length){let m=location.pathname.match(/\/u\/([^/]+)/);D.selected=m?decodeURIComponent(m[1]):D.units[0].patente}if(D.selected)await selectUnit(D.selected)}async function catalogoDeGomeria(){try{const d=await api('/api/marcas');$('#catMarcas').innerHTML=(d.marcas||[]).map(m=>`<option value="${esc(m.nombre)}">`).join('');$('#catMedidas').innerHTML=(d.medidas||[]).map(m=>`<option value="${esc(m.medida)}">${esc(m.descripcion||'')}</option>`).join('')}catch(e){/* sin 31_marcas_medidas.sql: los campos siguen siendo libres */}}
 /* =====================================================================
-   MOVIMIENTOS: todo lo que se cargó sobre las unidades, con filtros.
-   El rango de fechas lo pide a la base; el resto filtra lo ya traído.
+   MOVIMIENTOS: lo que se hizo sobre las unidades, un renglón por trabajo
+   (un parte con su rotación de cuatro cubiertas es un solo renglón) y
+   cada cubierta contada en una frase.
    ===================================================================== */
 const movFecha=v=>v?new Date(v).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
 const isoDia=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+/* «2IE» → «eje 2 izq. ext.». Lo que no sigue ese formato se muestra tal cual. */
+function posTxt(c){
+  if(!c)return '';const m=String(c).toUpperCase().match(/^(\d+)([ID])([IE])?$/);
+  if(String(c).toUpperCase().startsWith('AUX'))return 'auxilio';
+  return m?`eje ${m[1]} ${m[2]==='I'?'izq.':'der.'}${m[3]?(m[3]==='I'?' int.':' ext.'):''}`:String(c);
+}
+const MOV_VERBO={montaje:'Entra',desmontaje:'Sale',rotacion:'Rota',medicion:'Medición',recapado:'A recapar',reparacion:'A reparar',baja:'Baja',alta:'Alta'};
+function movFrase(m){
+  const cub=m.cubierta?`<b>${esc(m.cubierta)}</b>${m.marca?' <span class="flojo">'+esc(m.marca)+'</span>':''}`:'';
+  const de=m.desde_posicion?posTxt(m.desde_posicion):'',a=m.hasta_posicion?posTxt(m.hasta_posicion):'';
+  let donde='';
+  if(m.tipo==='rotacion')donde=`${esc(de)} → ${esc(a)}`;
+  else if(m.tipo==='montaje')donde=a?'en '+esc(a):'';
+  else donde=de?'de '+esc(de):(a?'en '+esc(a):'');
+  const mm=m.remanente_mm!=null?` <span class="flojo">· ${esc(m.remanente_mm)} mm</span>`:'';
+  return `<div class="movlinea"><span class="status ${esc(m.tipo)}">${esc(MOV_VERBO[m.tipo]||m.tipo)}</span> ${cub} ${donde}${mm}${m.nota?' <span class="flojo">· '+esc(m.nota)+'</span>':''}</div>`;
+}
+function movTrabajos(lista){
+  const g=new Map();
+  lista.forEach(m=>{const k=m.grupo_id||('m'+m.id);if(!g.has(k))g.set(k,[]);g.get(k).push(m)});
+  return [...g.values()].map(ms=>{ms.sort((a,b)=>a.id-b.id);return ms});
+}
 function movFiltrados(){
   const txt=$('#movBuscar').value.trim().toUpperCase(),plano=txt.replace(/[^A-Z0-9]/g,'');
   const tipo=$('#movTipo').value,usu=$('#movUsuario').value;
-  return (D.movs||[]).filter(m=>{
-    if(tipo&&m.tipo!==tipo)return false;
+  return movTrabajos(D.movs||[]).filter(ms=>{
+    const m=ms[0];
+    if(tipo&&!ms.some(x=>x.tipo===tipo))return false;
     if(usu&&(m.usuario||'')!==usu)return false;
     if(!txt)return true;
     if(plano&&String(m.patente||'').includes(plano))return true;
-    return [m.interno,m.cubierta,m.marca,m.medida,m.desde_posicion,m.hasta_posicion,m.nota,m.texto_original,m.sucursal]
-      .some(v=>String(v||'').toUpperCase().includes(txt));
+    return ms.some(x=>[x.interno,x.cubierta,x.marca,x.medida,x.desde_posicion,x.hasta_posicion,x.nota,x.texto_original,x.sucursal]
+      .some(v=>String(v||'').toUpperCase().includes(txt)));
   });
 }
 function pintarMovs(){
-  const f=movFiltrados(),total=(D.movs||[]).length;
-  $('#movCuenta').textContent=(f.length===total?`${total} movimientos`:`${f.length} de ${total} movimientos`)+(total>=3000?' · se muestran los 3000 más recientes del rango':'');
-  $('#movRows').innerHTML=f.length?f.slice(0,1000).map(m=>{
-    const pos=[m.desde_posicion,m.hasta_posicion].filter(Boolean).map(esc).join(' → ');
-    return `<tr><td>${esc(movFecha(m.fecha))}</td><td class="fuerte">${esc(fmtPat(m.patente))}${m.interno?' <span class="flojo">int. '+esc(m.interno)+'</span>':''}</td><td><span class="status ${esc(m.tipo)}">${esc(TIPOS[m.tipo]||m.tipo)}</span></td><td>${m.cubierta?'<b>'+esc(m.cubierta)+'</b>':'—'}${m.marca?' <span class="flojo">'+esc(m.marca)+'</span>':''}</td><td>${pos||'—'}</td><td class="num">${m.km_unidad!=null?nfmt(m.km_unidad):'—'}</td><td class="num">${m.remanente_mm!=null?esc(m.remanente_mm)+' mm':'—'}</td><td class="flojo">${esc(m.usuario||'—')}</td><td class="flojo">${esc(m.nota||'')}</td></tr>`}).join('')
-    :'<tr><td colspan="9" class="emptymsg">No hay movimientos que entren en ese filtro.</td></tr>';
+  const t=movFiltrados(),lineas=t.flat(),n=k=>lineas.filter(x=>x.tipo===k).length;
+  $('#movMetricas').innerHTML=[[t.length,'Trabajos'],[new Set(t.map(ms=>ms[0].patente)).size,'Unidades'],[n('montaje'),'Cubiertas puestas'],[n('desmontaje'),'Cubiertas sacadas'],[n('rotacion'),'Rotaciones']]
+    .map(([v,l])=>`<div class="metric"><b>${v}</b><span>${l}</span></div>`).join('');
+  $('#movCuenta').textContent=(D.movs||[]).length>=3000?'Se muestran los 3000 movimientos más recientes del período.':'';
+  $('#movRows').innerHTML=t.length?t.slice(0,500).map(ms=>{const m=ms[0],km=ms.find(x=>x.km_unidad!=null);
+    return `<tr><td>${esc(movFecha(m.fecha))}</td><td><button class="locate-tire fuerte" data-ir-unidad="${esc(m.patente)}">${esc(fmtPat(m.patente))}</button>${m.interno?' <span class="flojo">int. '+esc(m.interno)+'</span>':''}</td><td>${ms.map(movFrase).join('')}${m.texto_original?`<details class="movparte"><summary>Parte original</summary>${esc(m.texto_original)}</details>`:''}</td><td class="num">${km?nfmt(km.km_unidad):'—'}</td><td class="flojo">${esc(m.usuario||'—')}</td></tr>`}).join('')
+    :'<tr><td colspan="5" class="emptymsg">No hay movimientos que entren en ese filtro.</td></tr>';
+}
+function movPeriodo(dias){
+  const h=new Date(),d=new Date();d.setDate(d.getDate()-dias);
+  $('#movDesde').value=isoDia(d);$('#movHasta').value=isoDia(h);
+  $$('#movPeriodo [data-dias]').forEach(b=>b.classList.toggle('on',+b.dataset.dias===dias));
 }
 async function loadMovs(){
-  if(!$('#movDesde').value){const h=new Date(),d=new Date();d.setDate(d.getDate()-30);$('#movDesde').value=isoDia(d);$('#movHasta').value=isoDia(h)}
-  $('#movRows').innerHTML='<tr><td colspan="9" class="emptymsg">Cargando…</td></tr>';
+  if(!$('#movDesde').value)movPeriodo(30);
+  $('#movRows').innerHTML='<tr><td colspan="5" class="emptymsg">Cargando…</td></tr>';
   try{
     const q=new URLSearchParams({desde:$('#movDesde').value,hasta:$('#movHasta').value});
     D.movs=(await api('/api/movimientos-listado?'+q)).movimientos||[];
-  }catch(e){D.movs=[];$('#movRows').innerHTML=`<tr><td colspan="9" class="emptymsg error">${esc(e.message)}</td></tr>`;return}
+  }catch(e){D.movs=[];$('#movRows').innerHTML=`<tr><td colspan="5" class="emptymsg error">${esc(e.message)}</td></tr>`;return}
   const tipos=$('#movTipo'),antesT=tipos.value;
-  tipos.innerHTML='<option value="">Todos los tipos</option>'+[...new Set(D.movs.map(m=>m.tipo))].sort().map(t=>`<option value="${esc(t)}">${esc(TIPOS[t]||t)}</option>`).join('');
+  tipos.innerHTML='<option value="">Todos los trabajos</option>'+[...new Set(D.movs.map(m=>m.tipo))].sort().map(t=>`<option value="${esc(t)}">${esc(TIPOS[t]||t)}</option>`).join('');
   tipos.value=antesT;
   const usu=$('#movUsuario'),antesU=usu.value,yo=D.user&&D.user.nombre;
   const nombres=[...new Set(D.movs.map(m=>m.usuario).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
@@ -1279,13 +1383,15 @@ async function loadMovs(){
   pintarMovs();
 }
 ['#movBuscar','#movTipo','#movUsuario'].forEach(s=>$(s).addEventListener('input',pintarMovs));
-['#movDesde','#movHasta'].forEach(s=>$(s).addEventListener('change',loadMovs));
+['#movDesde','#movHasta'].forEach(s=>$(s).addEventListener('change',()=>{$$('#movPeriodo [data-dias]').forEach(b=>b.classList.remove('on'));loadMovs()}));
+$$('#movPeriodo [data-dias]').forEach(b=>b.onclick=()=>{movPeriodo(+b.dataset.dias);loadMovs()});
+$('#movRows').addEventListener('click',async e=>{const b=e.target.closest('[data-ir-unidad]');if(!b)return;tab('fleet');await selectUnit(b.dataset.irUnidad)});
 $('#movExportar').onclick=()=>{
-  const f=movFiltrados();if(!f.length)return;
+  const f=movFiltrados().flat();if(!f.length)return;
   const c=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   const filas=[['Fecha','Patente','Interno','Tipo','Cubierta','Marca','Medida','Desde','Hasta','Km','Remanente mm','Usuario','Nota','Texto del parte']]
-    .concat(f.map(m=>[movFecha(m.fecha),m.patente,m.interno,TIPOS[m.tipo]||m.tipo,m.cubierta,m.marca,m.medida,m.desde_posicion,m.hasta_posicion,m.km_unidad,m.remanente_mm,m.usuario,m.nota,m.texto_original]));
-  const blob=new Blob(['\ufeff'+filas.map(r=>r.map(c).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+    .concat(f.map(m=>[movFecha(m.fecha),m.patente,m.interno,TIPOS[m.tipo]||m.tipo,m.cubierta,m.marca,m.medida,posTxt(m.desde_posicion),posTxt(m.hasta_posicion),m.km_unidad,m.remanente_mm,m.usuario,m.nota,m.texto_original]));
+  const blob=new Blob(['﻿'+filas.map(r=>r.map(c).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`movimientos-gomeria-${isoDia(new Date())}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 };
 async function init(){const inicial=solapaDeLaUrl();if(inicial)tab(inicial,false);try{D.user=await api('/api/yo');$('#who').innerHTML=`${esc(D.user.nombre)} <a href="/salir">Salir</a>`;if(!D.user.puede_administrar)$('#newTire').style.display='none';catalogoDeGomeria();await dashboard()}catch(e){$('#unitDetail').innerHTML=`<div class="card error">${esc(e.message)}</div>`}}
