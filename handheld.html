@@ -968,7 +968,10 @@ async function interpretarParte() {
     $('#t-salida').innerHTML = `<div class="propuesta"><b>${esc(u.patente || '')} · ${esc(p.resumen || 'Movimiento interpretado')}</b><ul>` +
       p.acciones.map(a => `<li>${esc(a.tipo)} · ${esc(a.posicion || '')}` +
         (a.posicion_destino ? ' → ' + esc(a.posicion_destino) : '') +
-        (a.cubierta ? ' · ' + esc(a.cubierta) : '') + '</li>').join('') +
+        (a.cubierta ? ' · ' + esc(a.cubierta)
+          : (['desmontaje', 'recapado', 'reparacion', 'baja'].indexOf(a.tipo) >= 0 ? ' · sin número de fuego' : '')) +
+        ([a.marca, a.medida].filter(Boolean).length ? ' · ' + esc([a.marca, a.medida].filter(Boolean).join(' ')) : '') +
+        '</li>').join('') +
       `</ul><button class="btn" id="t-confirmar">Confirmar</button>
       <button class="btn alt" id="t-descartar">Descartar</button></div>`;
     $('#t-confirmar').onclick = confirmarParte;
