@@ -772,6 +772,13 @@ def historia_clinica(cx, texto):
         left join configuracion_posiciones pd on pd.id = mv.posicion_destino_id
         where mv.unidad_id = %s and mv.deshecho is null
         order by mv.fecha desc limit 15""", (unidad["id"],))
+    # El último service y lo que falta para el próximo, de la misma vista
+    # que la pantalla de Services. Las semis no tienen fila: viene None.
+    service = _bloque(cx, """
+        select ultimo_fecha, ultimo_km, tipo, cada_km, proximo_km,
+               km_actual, km_restantes, dias_restantes, estado
+        from v_services_hoy where unidad_id = %s""", (unidad["id"],))
+    salida["service"] = service[0] if service else None
     return salida
 
 
