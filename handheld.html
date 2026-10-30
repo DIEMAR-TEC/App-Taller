@@ -872,6 +872,8 @@ function pintarFicha() {
   const abiertas = ords.filter(o => o.estado === 'abierta');
   const docs = (f.documentos || []).filter(d => d.estado && d.estado !== 'vigente');
   const q = encodeURIComponent(pat);
+  const sv = f.service || {};
+  const faltan = sv.km_restantes == null ? null : Number(sv.km_restantes);
 
   let h = `<div class="unidad">${esc(pat)}
     <span>${esc([u.interno && 'Int. ' + u.interno, u.marca, u.modelo, u.anio].filter(Boolean).join(' · '))}</span>
@@ -887,6 +889,8 @@ function pintarFicha() {
   <div class="kpis">
     <div class="kpi"><span>Km actual</span><b>${num(u.km_actual)}</b></div>
     <div class="kpi"><span>Km últimos 30 días</span><b>${num(rec.km)}</b></div>
+    <div class="kpi"><span>Último service</span><b>${sv.ultimo_fecha ? fecha(sv.ultimo_fecha) : '—'}</b></div>
+    <div class="kpi"><span>${faltan != null && faltan < 0 ? 'Service pasado por' : 'Km al próximo service'}</span><b>${sv.estado === 'km_dudoso' ? 'Km dudoso' : faltan == null ? '—' : '<span class="chip ' + (sv.estado === 'vencido' ? 'mal' : sv.estado === 'urgente' || sv.estado === 'proximo' ? 'aviso' : 'bien') + '">' + num(Math.abs(faltan)) + '</span>'}</b></div>
     <div class="kpi"><span>Litros ${mes.mes ? mesNombre(mes.mes) : 'del mes'}</span><b>${num(mes.litros)}</b></div>
     <div class="kpi"><span>L/100 km ${mes.mes ? mesNombre(mes.mes) : ''}</span><b>${num(mes.litros_100km, 1)}</b></div>
     <div class="kpi"><span>Órdenes abiertas</span><b>${abiertas.length}</b></div>
