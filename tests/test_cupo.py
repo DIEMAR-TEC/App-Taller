@@ -15,6 +15,7 @@ import http.client
 import socket
 import sys
 import threading
+import time
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -79,13 +80,21 @@ class Cupo(unittest.TestCase):
         return r.status
 
     def libres(self):
-        """Cuántos turnos quedan sin usar."""
-        n = 0
-        while self.semaforo.acquire(blocking=False):
-            n += 1
-        for _ in range(n):
-            self.semaforo.release()
-        return n
+        """Cuántos turnos quedan sin usar.
+
+        El cliente recibe la respuesta un instante antes de que el hilo del
+        servidor devuelva el turno: se le da hasta un segundo para que la
+        cuenta no dependa de quién llega primero."""
+        limite = time.monotonic() + 1
+        while True:
+            n = 0
+            while self.semaforo.acquire(blocking=False):
+                n += 1
+            for _ in range(n):
+                self.semaforo.release()
+            if n >= 2 or time.monotonic() > limite:
+                return n
+            time.sleep(.01)
 
     def test_el_turno_se_devuelve_despues_de_responder(self):
         for _ in range(6):                      # el triple del cupo
