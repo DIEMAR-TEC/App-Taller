@@ -256,7 +256,7 @@
   <span class="who" id="quien"></span>
 </header>
 
-<nav class="solapas"><a href="/unidades" class="on" data-vista="unidades">Unidades</a><a href="/unidades#semis" data-vista="semis">Asociación de equipos</a><a href="/unidades#qr" data-vista="qr" id="solapa-qr" hidden>QR</a></nav>
+<nav class="solapas"><a href="/unidades" class="on" data-vista="unidades">Unidades</a><a href="/unidades#semis" data-vista="semis">Asociación de equipos</a></nav>
 
 <main>
   <h1>Flota</h1>
@@ -280,13 +280,15 @@
             title="Exporta las unidades seleccionadas o, si no hay selección, el listado filtrado">Excel</button>
     <button class="btn gris" id="exp-pdf" type="button"
             title="Exporta las unidades seleccionadas o, si no hay selección, el listado filtrado. En el diálogo de impresión, seleccionar «Guardar como PDF»">PDF</button>
+    <button class="btn gris" id="exp-qr" type="button" hidden
+            title="Hoja de QR de las unidades seleccionadas o, si no hay selección, del listado filtrado. El formato (A4 o rollo de etiquetas) se elige en la hoja">Generar QR</button>
     <span class="cuenta" id="cuenta"></span>
   </div>
 
   <!-- Selección para exportar. Aparece solo cuando hay unidades marcadas. -->
   <div class="lote" id="lote" hidden>
     <b id="lote-cuantas"></b>
-    <span class="apagado">Excel y PDF exportarán solo las unidades seleccionadas.</span>
+    <span class="apagado">Excel, PDF y QR incluirán solo las unidades seleccionadas.</span>
     <button class="btn gris" id="lote-limpiar" type="button">Quitar selección</button>
   </div>
 
@@ -365,40 +367,6 @@
     </div>
   </section>
 
-  <!-- --------------------------------------------------- QR por unidad
-       El QR que se pega en cada camión abre su registro (historial,
-       gomería y stock) al escanearlo con la handheld o el celular. La hoja
-       sale en A4 o en los rollos de etiquetadora. -->
-  <section id="v-qr" hidden>
-    <p class="sub">QR por patente. Cada código abre el registro de la unidad en la handheld.</p>
-    <div class="barra">
-      <input id="qr-buscar" type="search" placeholder="Patente, interno o residencia">
-      <select id="qr-sucursal"><option value="">Todas las residencias</option></select>
-      <select id="qr-estado">
-        <option value="activas">Activas</option>
-        <option value="todas">Todas</option>
-      </select>
-      <button class="btn" id="qr-generar" type="button"
-              title="Hoja con los QR seleccionados o, sin selección, con los del listado filtrado. El formato (A4 o rollo) se elige en la hoja">Generar hoja de QR</button>
-      <span class="cuenta" id="qr-cuenta"></span>
-    </div>
-    <div class="lote" id="qr-lote" hidden>
-      <b id="qr-cuantas"></b>
-      <span class="apagado">La hoja incluirá solo las unidades seleccionadas.</span>
-      <button class="btn gris" id="qr-limpiar" type="button">Quitar selección</button>
-    </div>
-    <div class="caja">
-      <table>
-        <thead><tr>
-          <th class="tilde-col"><input type="checkbox" class="tilde" id="qr-todas"
-              title="Seleccionar todas las unidades filtradas"></th>
-          <th>Patente</th><th>Interno</th><th>Marca</th><th>Modelo</th><th>Residencia</th><th></th>
-        </tr></thead>
-        <tbody id="qr-cuerpo"></tbody>
-      </table>
-      <p class="vacio" id="qr-vacio" hidden>No hay unidades que entren en ese filtro.</p>
-    </div>
-  </section>
 </main>
 
 <div class="fondo" id="fondo" hidden>
@@ -713,6 +681,15 @@ $('#exp-excel').onclick = () => {
 /* El PDF sale por el diálogo de impresión, como la cédula de la unidad:
    el navegador ya sabe hacer PDF y no hace falta traer una librería para
    repetir lo que hace peor. */
+/* La hoja de QR la arma el servidor (/unidades/qr) con las patentes de la
+   selección o del listado filtrado. El formato —A4 o rollo de
+   etiquetadora— se elige en la propia hoja. */
+$('#exp-qr').onclick = () => {
+  const filas = comoSeVe();
+  if (!filas.length) return avisar('No hay unidades para generar QR con los filtros aplicados.');
+  open('/unidades/qr?patentes=' + encodeURIComponent(filas.map(u => u.patente).join(',')), '_blank');
+};
+
 $('#exp-pdf').onclick = () => {
   const filas = comoSeVe();
   if (!filas.length) return avisar('No hay unidades para exportar con los filtros aplicados.');
@@ -1357,8 +1334,6 @@ async function cargar(){
 
   opciones($('#f-sucursal'), DATOS.sucursales, 'Todas las residencias');
   opciones($('#f-uso'), DATOS.usos, 'Todos los usos');
-  opciones($('#qr-sucursal'), DATOS.sucursales, 'Todas las residencias');
-  if (!$('#v-qr').hidden) pintarQr();
   datalist('sucursales', DATOS.sucursales);
   datalist('usos', DATOS.usos);
   const unicos = k => [...new Set(DATOS.unidades.map(u => u[k]).filter(Boolean))].sort();
@@ -1415,8 +1390,7 @@ fetch('/api/yo').then(r => r.ok ? r.json() : null).then(d => {
   PUEDE = d.gestiona !== undefined ? !!d.gestiona : ['admin','encargado'].includes(d.rol);
   $('#quien').textContent = `${d.nombre} · ${d.rol_nombre || d.rol}`;
   $('#nueva').hidden = !PUEDE;
-  $('#solapa-qr').hidden = !PUEDE;
-  if (PUEDE && location.hash === '#qr') mostrarVista('qr');
+  $('#exp-qr').hidden = !PUEDE;
   if (!PUEDE) $('.sub').textContent += ' Acceso de solo lectura: la edición requiere rol de encargado.';
 }).catch(() => {});
 
@@ -1485,89 +1459,20 @@ async function cargarSemis() {
   $('#vacio-semis').hidden = d.semis.length > 0;
 }
 
-/* Las solapas de arriba: las unidades, la asociación de equipos y los QR.
-   Las dos últimas quedan en la dirección (#semis, #qr) para entrar directo. */
+/* Las solapas de arriba: las unidades y la asociación de equipos. La
+   segunda queda en la dirección (#semis) para entrar directo. */
 function mostrarVista(vista) {
-  if (vista === 'qr' && !PUEDE) vista = 'unidades';
+  if (vista !== 'semis') vista = 'unidades';
   const otra = vista !== 'unidades';
   document.querySelectorAll('nav.solapas [data-vista]')
     .forEach(x => x.classList.toggle('on', x.dataset.vista === vista));
   $('#v-semis').hidden = vista !== 'semis';
-  $('#v-qr').hidden = vista !== 'qr';
   document.querySelectorAll('main > .barra, main > .caja')
     .forEach(e => { e.hidden = otra; });
   if (otra) $('#lote').hidden = true; else pintarLote();
   if (vista === 'semis' && !SEMIS.datos) cargarSemis();
-  if (vista === 'qr') pintarQr();
   history.replaceState(null, '', otra ? '/unidades#' + vista : '/unidades');
 }
-
-/* ====================================================================
-   QR POR UNIDAD
-   Usa el mismo listado de la flota. La hoja la arma el servidor
-   (/unidades/qr) con las patentes elegidas.
-   ==================================================================== */
-const QR_TILDADAS = new Set();
-
-function qrFiltradas() {
-  const txt = $('#qr-buscar').value.trim().toUpperCase();
-  const plano = txt.replace(/[^A-Z0-9]/g, '');
-  const suc = $('#qr-sucursal').value, est = $('#qr-estado').value;
-  return DATOS.unidades.filter(u => {
-    if (est === 'activas' && !u.activa) return false;
-    if (suc && u.sucursal !== suc) return false;
-    if (!txt) return true;
-    if (plano && String(u.patente || '').includes(plano)) return true;
-    return [u.interno, u.sucursal, u.marca, u.modelo]
-      .some(v => String(v || '').toUpperCase().includes(txt));
-  }).sort((a, b) => String(a.patente).localeCompare(String(b.patente), 'es'));
-}
-
-function pintarQr() {
-  const filas = qrFiltradas();
-  $('#qr-cuerpo').innerHTML = filas.map(u =>
-    `<tr class="${u.activa ? '' : 'baja'}">` +
-    `<td class="tilde-col"><input type="checkbox" class="tilde" data-qr="${esc(u.patente)}"` +
-    `${QR_TILDADAS.has(u.patente) ? ' checked' : ''}` +
-    ` aria-label="Seleccionar ${esc(fmtPat(u.patente))}"></td>` +
-    `<td><span class="pat">${esc(fmtPat(u.patente))}</span></td>` +
-    `<td>${esc(u.interno || '—')}</td><td>${esc(u.marca || '—')}</td>` +
-    `<td>${esc(u.modelo || '—')}</td><td>${esc(u.sucursal || '—')}</td>` +
-    `<td><a class="accion" target="_blank" rel="noopener"` +
-    ` href="/unidades/qr?patentes=${encodeURIComponent(u.patente)}">QR</a></td></tr>`).join('');
-  $('#qr-vacio').hidden = filas.length > 0;
-  $('#qr-cuenta').textContent = `${filas.length} unidades`;
-  $('#qr-lote').hidden = QR_TILDADAS.size === 0;
-  $('#qr-cuantas').textContent = QR_TILDADAS.size === 1
-    ? '1 unidad seleccionada' : `${QR_TILDADAS.size} unidades seleccionadas`;
-  $('#qr-todas').checked = filas.length > 0 && filas.every(u => QR_TILDADAS.has(u.patente));
-}
-
-for (const id of ['#qr-buscar', '#qr-sucursal', '#qr-estado'])
-  $(id).addEventListener('input', pintarQr);
-
-$('#qr-cuerpo').addEventListener('change', ev => {
-  const t = ev.target.closest('[data-qr]');
-  if (!t) return;
-  if (t.checked) QR_TILDADAS.add(t.dataset.qr); else QR_TILDADAS.delete(t.dataset.qr);
-  pintarQr();
-});
-
-$('#qr-todas').onclick = ev => {
-  qrFiltradas().forEach(u => ev.target.checked
-    ? QR_TILDADAS.add(u.patente) : QR_TILDADAS.delete(u.patente));
-  pintarQr();
-};
-
-$('#qr-limpiar').onclick = () => { QR_TILDADAS.clear(); pintarQr(); };
-
-$('#qr-generar').onclick = () => {
-  const patentes = QR_TILDADAS.size
-    ? [...QR_TILDADAS]
-    : qrFiltradas().map(u => u.patente);
-  if (!patentes.length) return alert('No hay unidades para generar.');
-  open('/unidades/qr?patentes=' + encodeURIComponent(patentes.join(',')), '_blank');
-};
 
 document.addEventListener('click', async ev => {
   const solapa = ev.target.closest('nav.solapas [data-vista]');
