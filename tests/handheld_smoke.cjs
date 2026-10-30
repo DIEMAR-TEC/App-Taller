@@ -43,7 +43,8 @@ const ARTS = [
                                               mantenimiento: 'correctivo', solicitado: 'Pérdida de aire', total: 120000}]},
           cubiertas: [{posicion: 'D1I', cubierta: 'F100', marca: 'Fate', remanente_mm: 12}],
           documentos: [{tipo: 'VTV', vence: '2026-10-01', estado: 'vencido'}],
-          gomeria: [{fecha: '2026-10-20', tipo: 'montaje', cubierta: 'F100', hasta: 'D1I'}]}});
+          gomeria: [{fecha: '2026-10-20', tipo: 'montaje', cubierta: 'F100', hasta: 'D1I'}],
+          service: {ultimo_fecha: '2026-08-14', ultimo_km: 490000, proximo_km: 520000, km_restantes: 7655, estado: 'proximo'}}});
       }
       if (p === '/handheld' || p.startsWith('/handheld/u/')) return route.fulfill({path: path.join(dir, 'handheld.html'), contentType: 'text/html'});
       if (p === '/vendor/jsQR.js') return route.fulfill({path: path.join(dir, 'vendor/jsQR.js')});
@@ -118,7 +119,7 @@ const ARTS = [
 
     // El registro de la unidad.
     const ficha = await page.textContent('#u-ficha');
-    for (const t of ['512.345', '8.200', '2.950', '36,4', 'OT-0012', 'Pérdida de aire', 'VTV', 'F100'])
+    for (const t of ['512.345', '8.200', '2.950', '36,4', 'OT-0012', 'Pérdida de aire', 'VTV', 'F100', '14/08/2026', '7.655', 'Km al próximo service'])
       assert.ok(ficha.includes(t), 'falta ' + t + ' en la ficha');
     assert.strictEqual(await page.getAttribute('a[href*="#v-orden"]', 'href'), '/movil?patente=AD247MQ#v-orden');
 
